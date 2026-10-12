@@ -1,0 +1,27 @@
+node_modules/
+.next/
+playwright-report/
+test-results/
+coverage/
+
+# Secrets and local environment
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+secrets/
+
+# Local databases, journals, and backups
+data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.backup
+*.bak
+backups/
+
+# OS/editor output
+.DS_Store
+*.tsbuildinfo
