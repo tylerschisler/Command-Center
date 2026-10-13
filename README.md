@@ -1,6 +1,6 @@
 # Command Center
 
-Local-first personal productivity and project-management software. Phase 4 provides manual Task, Project, Person, Request, Meeting, and Calendar workflows, deterministic projections/risk indicators, encrypted SQLite persistence, and durable activity history.
+Local-first personal productivity and project-management software. Phase 5 provides manual Task, Project, Person, Request, Meeting, Calendar, and Knowledge workflows, deterministic projections, encrypted SQLite persistence, versioned knowledge, local search, and durable activity history.
 
 ## Local setup
 
@@ -22,6 +22,8 @@ npm run dev
 `People` manages lightweight work contacts and derives their open delegated Tasks, outstanding Requests, and related Projects. `Waiting On` tracks what another Person owes, with All, Overdue, Due Soon, Follow-Up Needed, and Received views. Legacy anonymous Phase 2 delegated owners remain visible as unresolved until a real Person is selected; they are never silently assigned.
 
 `Calendar` provides Month, Week, Day, and Agenda projections over Meetings and existing Task, Project, and Request dates. Meeting Mode supports attendees, live notes, decisions, quick Tasks, quick Requests, and explicit start/end actions. Calendar records are never duplicated into a separate event table.
+
+`Knowledge` is a local Markdown library with explicit saves, multi-topic membership, normalized Tags, content version history, archive/restore, SQLite FTS5 search, and manual relationships to Projects, People, Meetings, and other Knowledge Pages. Saving changed content creates a new immutable version; typing alone does not create versions or ActivityEvents.
 
 ## Commands
 

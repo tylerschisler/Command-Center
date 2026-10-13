@@ -106,6 +106,14 @@ Meeting timestamps are stored as canonical UTC ISO-8601 instants after local bro
 
 `CalendarService` is a read-only application projection over Meeting start instants, Task/Project target and due dates, and Request due/follow-up dates. It returns typed events with entity IDs and event kinds for navigation. No duplicate Calendar persistence or direct UI-to-repository path is introduced.
 
+Phase 5 adds `KnowledgeService` and `KnowledgeRepository`. Page, Topic, Tag, version, assignment, archive, restore, and relationship mutations pass through the service and atomically persist their corresponding `ActivityEvent`. A content-changing explicit save also inserts its complete `KnowledgeVersion` in the same transaction. Page creation records the initial version; title-only or summary-only changes do not create redundant content versions.
+
+Knowledge content is stored as portable Markdown text. The client provides an accessible long-form textarea and a safe local renderer without a cloud editor or complex rich-text dependency. The editor uses explicit Save rather than autosave, preventing keystroke-level versions and ActivityEvents.
+
+`EntityRelationship` is introduced as the documented minimal generic cross-entity mechanism. Phase 5 constrains the source to `knowledge_page` and targets to Project, Person, Meeting, or another Knowledge Page. Services validate every target before insertion. Topic and Tag membership remain dedicated many-to-many joins because they are core taxonomy rather than generic semantic relationships.
+
+Local search uses an SQLite FTS5 external-content table over Knowledge title, summary, and content, maintained by database triggers. Topic and Tag names are included with local relational matching. Search stays inside the encrypted SQLite connection and sends no Knowledge content over the network. Semantic/vector search remains deferred.
+
 ## Activity Logging
 Meaningful mutations must create ActivityEvents.
 

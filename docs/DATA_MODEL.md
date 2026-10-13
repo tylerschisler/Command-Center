@@ -175,6 +175,8 @@ Relationships:
 - Meetings
 - other entities through generic relationships
 
+Phase 5 stores pages in `knowledge_pages`. Content is Markdown source and may be empty. Active queries exclude `archivedAt` by default; archive and restore preserve versions, taxonomy joins, and entity relationships. There is no forced folder hierarchy.
+
 ## KnowledgeTopic
 Fields:
 - id
@@ -183,12 +185,16 @@ Fields:
 
 Many-to-many with KnowledgePage.
 
+Phase 5 stores a whitespace-collapsed, case-folded `normalizedName` with a unique constraint. This prevents trivial duplicate Topic names while preserving the user-facing spelling.
+
 ## Tag
 Fields:
 - id
 - name
 
 Many-to-many with KnowledgePage and optionally other entities later.
+
+Phase 5 applies the same normalized-name uniqueness rule to Tags. `knowledge_page_topics` and `knowledge_page_tags` use composite primary keys so a page can appear once in each Topic/Tag without duplicating the page itself.
 
 ## KnowledgeVersion
 Fields:
@@ -205,6 +211,8 @@ Suggested changeSource:
 - jarvis
 - voice
 - import
+
+Phase 5 creates an initial version with every page and a new complete-content version for each explicit save that changes content. Restoring a prior version copies its content into the page and creates another version; existing history is immutable and never deleted by restore or archive.
 
 ## Note
 Fields:
@@ -278,6 +286,11 @@ Fields:
 
 Purpose:
 Provide flexible cross-entity relationships without hard-coding every possible connection.
+
+Phase 5 implements `entity_relationships` for a Knowledge Page source and Project, Person, Meeting, or Knowledge Page targets. A unique database index prevents duplicate source/type/target relationships, while service validation rejects missing targets and self-relations.
+
+## Knowledge Search
+`knowledge_pages_fts` is an SQLite FTS5 external-content index over page title, content, and summary. Insert/update/delete triggers keep it synchronized with `knowledge_pages`. Topic and Tag name matches are combined with FTS results through local SQL. The virtual table is a derived index, not a second source of truth.
 
 ## Attachment
 Fields:

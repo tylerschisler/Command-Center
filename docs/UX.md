@@ -211,6 +211,8 @@ Knowledge page:
 
 The user must be able to manually edit everything without AI.
 
+Phase 5 implements a manual-first Knowledge workspace with All Pages, Topics, Tags, and Archived views; local search; explicit Markdown editing; taxonomy assignment; related entities/pages; and inspectable version history. One page appears in every assigned Topic without duplication. Explicit Save creates a version only when content changes, and restoring a version creates a new saved state. Project, Person, and Meeting detail surfaces show lightweight related-Knowledge sections without redesigning their primary workflows.
+
 ## Intelligence
 Executive-briefing style, not a news feed.
 

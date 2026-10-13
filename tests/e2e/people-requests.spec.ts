@@ -43,7 +43,7 @@ test("creates a person, delegates a task, tracks a project request, receives it,
   await page.getByRole("button", { name: /Provide signed evidence/ }).click();
   await page.getByRole("button", { name: "Mark received" }).click();
   await page.getByRole("tab", { name: "Received" }).click();
-  await expect(page.getByText("Provide signed evidence")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Provide signed evidence/ })).toBeVisible();
 
   await page.reload();
   await page.getByRole("tab", { name: "Received" }).click();

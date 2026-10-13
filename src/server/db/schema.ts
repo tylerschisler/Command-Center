@@ -185,6 +185,108 @@ export const requests = sqliteTable(
   ],
 );
 
+export const knowledgePages = sqliteTable(
+  "knowledge_pages",
+  {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    content: text("content").notNull().default(""),
+    summary: text("summary"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    archivedAt: text("archived_at"),
+  },
+  (table) => [
+    index("knowledge_pages_title_idx").on(table.title),
+    index("knowledge_pages_archived_at_idx").on(table.archivedAt),
+  ],
+);
+
+export const knowledgeTopics = sqliteTable(
+  "knowledge_topics",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull().unique(),
+    description: text("description"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [index("knowledge_topics_name_idx").on(table.name)],
+);
+
+export const tags = sqliteTable(
+  "tags",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull().unique(),
+  },
+  (table) => [index("tags_name_idx").on(table.name)],
+);
+
+export const knowledgePageTopics = sqliteTable(
+  "knowledge_page_topics",
+  {
+    knowledgePageId: text("knowledge_page_id").notNull().references(() => knowledgePages.id, { onDelete: "cascade" }),
+    knowledgeTopicId: text("knowledge_topic_id").notNull().references(() => knowledgeTopics.id, { onDelete: "cascade" }),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.knowledgePageId, table.knowledgeTopicId] }),
+    index("knowledge_page_topics_topic_idx").on(table.knowledgeTopicId),
+  ],
+);
+
+export const knowledgePageTags = sqliteTable(
+  "knowledge_page_tags",
+  {
+    knowledgePageId: text("knowledge_page_id").notNull().references(() => knowledgePages.id, { onDelete: "cascade" }),
+    tagId: text("tag_id").notNull().references(() => tags.id, { onDelete: "cascade" }),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.knowledgePageId, table.tagId] }),
+    index("knowledge_page_tags_tag_idx").on(table.tagId),
+  ],
+);
+
+export const knowledgeVersions = sqliteTable(
+  "knowledge_versions",
+  {
+    id: text("id").primaryKey(),
+    knowledgePageId: text("knowledge_page_id").notNull().references(() => knowledgePages.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    changeDescription: text("change_description").notNull(),
+    changedBy: text("changed_by").notNull(),
+    changeSource: text("change_source", { enum: ["manual", "jarvis", "voice", "import"] }).notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("knowledge_versions_page_idx").on(table.knowledgePageId),
+    check("knowledge_versions_source_check", sql`${table.changeSource} in ('manual','jarvis','voice','import')`),
+  ],
+);
+
+export const entityRelationships = sqliteTable(
+  "entity_relationships",
+  {
+    id: text("id").primaryKey(),
+    sourceType: text("source_type").notNull(),
+    sourceId: text("source_id").notNull(),
+    relationshipType: text("relationship_type").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("entity_relationships_source_idx").on(table.sourceType, table.sourceId),
+    index("entity_relationships_target_idx").on(table.targetType, table.targetId),
+    check("entity_relationships_source_type_check", sql`${table.sourceType} in ('knowledge_page')`),
+    check("entity_relationships_target_type_check", sql`${table.targetType} in ('project','person','meeting','knowledge_page')`),
+  ],
+);
+
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
@@ -198,3 +300,13 @@ export type NewMeeting = typeof meetings.$inferInsert;
 export type MeetingParticipant = typeof meetingParticipants.$inferSelect;
 export type MeetingDecision = typeof meetingDecisions.$inferSelect;
 export type NewMeetingDecision = typeof meetingDecisions.$inferInsert;
+export type KnowledgePage = typeof knowledgePages.$inferSelect;
+export type NewKnowledgePage = typeof knowledgePages.$inferInsert;
+export type KnowledgeTopic = typeof knowledgeTopics.$inferSelect;
+export type NewKnowledgeTopic = typeof knowledgeTopics.$inferInsert;
+export type Tag = typeof tags.$inferSelect;
+export type NewTag = typeof tags.$inferInsert;
+export type KnowledgeVersion = typeof knowledgeVersions.$inferSelect;
+export type NewKnowledgeVersion = typeof knowledgeVersions.$inferInsert;
+export type EntityRelationship = typeof entityRelationships.$inferSelect;
+export type NewEntityRelationship = typeof entityRelationships.$inferInsert;

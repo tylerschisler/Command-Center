@@ -88,4 +88,36 @@ export const meetingCreateSchema = meetingFields.extend({ status: z.enum(MEETING
 export const meetingUpdateSchema = meetingFields.partial().extend({ source });
 export const decisionCreateSchema = z.object({ content: z.string().trim().min(1).max(10_000), source });
 
+export const KNOWLEDGE_CHANGE_SOURCES = ["manual", "jarvis", "voice", "import"] as const;
+export const KNOWLEDGE_RELATIONSHIP_TARGETS = ["project", "person", "meeting", "knowledge_page"] as const;
+const changeSource = z.enum(KNOWLEDGE_CHANGE_SOURCES).default("manual");
+export const knowledgePageCreateSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  content: z.string().max(500_000).default(""),
+  summary: z.string().trim().max(2_000).nullable().optional(),
+  changeDescription: z.string().trim().min(1).max(500).default("Initial version"),
+  changedBy: z.string().trim().min(1).max(200).default("Current user"),
+  changeSource,
+  source,
+});
+export const knowledgePageUpdateSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  content: z.string().max(500_000).optional(),
+  summary: z.string().trim().max(2_000).nullable().optional(),
+  changeDescription: z.string().trim().min(1).max(500).optional(),
+  changedBy: z.string().trim().min(1).max(200).optional(),
+  changeSource: z.enum(KNOWLEDGE_CHANGE_SOURCES).optional(),
+  source,
+});
+export const knowledgeTopicCreateSchema = z.object({ name: z.string().trim().min(1).max(100), description: z.string().trim().max(1_000).nullable().optional(), source });
+export const knowledgeTopicUpdateSchema = knowledgeTopicCreateSchema.omit({ source: true }).partial().extend({ source });
+export const knowledgeTagCreateSchema = z.object({ name: z.string().trim().min(1).max(100), source });
+export const knowledgeRelationshipCreateSchema = z.object({
+  targetType: z.enum(KNOWLEDGE_RELATIONSHIP_TARGETS),
+  targetId: z.string().uuid(),
+  relationshipType: z.string().trim().min(1).max(100).default("related_to"),
+  source,
+});
+export const knowledgeVersionRestoreSchema = z.object({ versionId: z.string().uuid(), changeDescription: z.string().trim().min(1).max(500).default("Restored a previous version"), changedBy: z.string().trim().min(1).max(200).default("Current user"), source });
+
 export const idSchema = z.string().uuid();

@@ -154,6 +154,14 @@ Definition of Done:
 - one page can appear under multiple topics
 - all edits preserve version history
 
+Implemented foundation:
+- encrypted versioned migration for Knowledge Pages, Topics, Tags, versions, taxonomy joins, generic entity relationships, and local FTS5
+- manual Markdown create/edit/archive/restore with explicit-save version history and restore-to-version
+- multi-topic and multi-tag browsing with normalized duplicate prevention
+- local title/content/summary/Topic/Tag search
+- relationships to Projects, People, Meetings, and other Knowledge Pages with lightweight existing-screen integrations
+- atomic ActivityEvents for meaningful Knowledge mutations
+
 ## Phase 6 — Command Center + Briefings
 Build:
 - Home dashboard
