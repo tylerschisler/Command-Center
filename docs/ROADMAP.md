@@ -178,6 +178,13 @@ Definition of Done:
 - briefings persist
 - dashboard surfaces risk and focus
 
+Implemented foundation:
+- encrypted versioned `briefings` migration with structured facts, deterministic rendering, and atomic `BRIEFING_GENERATED` events
+- bounded aggregate Home projection across Tasks, Projects, Requests, Meetings, People, decisions, and ActivityEvents
+- actionable summary, Today’s Work, Attention, Waiting On, Meetings, Project Health, and transparent Focus ranking
+- manual Morning, End-of-Day, and Weekly generation with a persisted library and immutable regeneration snapshots
+- browser-local date and IANA time-zone boundaries while retaining date-only domain semantics
+
 ## Phase 7 — Jarvis Text + Workspace
 Build:
 - AI provider abstraction

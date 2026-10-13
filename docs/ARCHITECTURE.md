@@ -188,6 +188,13 @@ Pipeline:
 
 This prevents AI-generated fake accomplishments.
 
+### Phase 6 dashboard and deterministic briefings
+`CommandCenterService` builds Home from one bounded `DashboardSnapshot` produced by `DrizzleCommandCenterRepository`. The snapshot uses a fixed set of table queries for Tasks, Projects, Requests, Meetings, People, participants, decisions, and ActivityEvents, avoiding per-row lookups. Current-state sections use current entities; historical EOD and Weekly sections use period-scoped ActivityEvents. `BriefingService` persists both the structured version-1 payload and its deterministic rendering through `BriefingRepository`, which atomically writes `BRIEFING_GENERATED`.
+
+Attention uses documented additive weights: overdue 10,000; target-after-due 5,000; Critical 1,000; High 500; due today/soon 200; blocked or follow-up needed 100. Off Track adds 1,200 and At Risk adds 600. Stable title ordering breaks ties. Focus is the first five ranked attention items and always exposes the factors that produced the recommendation. This is transparent prioritization, not AI inference.
+
+The browser supplies its `YYYY-MM-DD` local date and IANA time-zone name. Date-only Task, Project, and Request fields are compared lexically and never converted to UTC. Meeting UTC instants and ActivityEvent timestamps are converted to calendar dates with `Intl.DateTimeFormat` in the supplied zone. Weekly periods run Monday through Sunday; tomorrow and next-week dates use date-only calendar arithmetic.
+
 ## Knowledge Search
 V1:
 - SQLite full-text search or equivalent

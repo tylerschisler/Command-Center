@@ -1,6 +1,6 @@
 # Command Center
 
-Local-first personal productivity and project-management software. Phase 5 provides manual Task, Project, Person, Request, Meeting, Calendar, and Knowledge workflows, deterministic projections, encrypted SQLite persistence, versioned knowledge, local search, and durable activity history.
+Local-first personal productivity and project-management software. Phase 6 provides manual Task, Project, Person, Request, Meeting, Calendar, and Knowledge workflows plus a deterministic Command Center and persisted Morning, End-of-Day, and Weekly briefings. Data remains in encrypted SQLite with versioned knowledge, local search, and durable activity history.
 
 ## Local setup
 
@@ -24,6 +24,8 @@ npm run dev
 `Calendar` provides Month, Week, Day, and Agenda projections over Meetings and existing Task, Project, and Request dates. Meeting Mode supports attendees, live notes, decisions, quick Tasks, quick Requests, and explicit start/end actions. Calendar records are never duplicated into a separate event table.
 
 `Knowledge` is a local Markdown library with explicit saves, multi-topic membership, normalized Tags, content version history, archive/restore, SQLite FTS5 search, and manual relationships to Projects, People, Meetings, and other Knowledge Pages. Saving changed content creates a new immutable version; typing alone does not create versions or ActivityEvents.
+
+`Home` derives concise daily metrics, ranked attention, work, dependencies, meetings, project health, and Focus recommendations from persisted local data. Ranking is deterministic and displays its reasons. Morning, End-of-Day, and Weekly briefings persist both traceable structured facts and a human-readable local rendering; Phase 6 uses no AI or cloud dependency. Generation is manual, and regenerating preserves prior briefing snapshots.
 
 ## Commands
 

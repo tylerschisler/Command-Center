@@ -323,6 +323,8 @@ Suggested types:
 - weekly
 - custom
 
+Phase 6 persists these records in `briefings`. `structuredFacts` is versioned JSON (`version: 1`) containing the exact current dashboard projection, period-scoped ActivityEvent groups, recorded Meeting decisions, and the next-day or next-week projection used to render the briefing. `renderedContent` is deterministic Markdown-like text generated only from that payload; `aiGenerated` is always false in Phase 6. Regeneration creates a new immutable snapshot instead of replacing an earlier briefing, so the library preserves what was generated at each point in time. A `BRIEFING_GENERATED` ActivityEvent is committed atomically with each record.
+
 ## InboxItem
 Optional V1 entity if required by implementation.
 

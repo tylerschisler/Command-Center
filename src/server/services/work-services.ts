@@ -6,6 +6,7 @@ import { DrizzlePersonRepository } from "@/server/repositories/person-repository
 import { DrizzleRequestRepository } from "@/server/repositories/request-repository";
 import { DrizzleMeetingRepository } from "@/server/repositories/meeting-repository";
 import { DrizzleKnowledgeRepository } from "@/server/repositories/knowledge-repository";
+import { DrizzleBriefingRepository, DrizzleCommandCenterRepository } from "@/server/repositories/command-center-repository";
 import { ProjectService } from "./project-service";
 import { TaskService } from "./task-service";
 import { PersonService } from "./person-service";
@@ -13,6 +14,7 @@ import { RequestService } from "./request-service";
 import { MeetingService } from "./meeting-service";
 import { CalendarService } from "./calendar-service";
 import { KnowledgeService } from "./knowledge-service";
+import { BriefingService, CommandCenterService } from "./briefing-service";
 
 export function createWorkServices() {
   const database = getDatabase();
@@ -23,6 +25,8 @@ export function createWorkServices() {
   const requestRepository = new DrizzleRequestRepository(database);
   const meetingRepository = new DrizzleMeetingRepository(database);
   const knowledgeRepository = new DrizzleKnowledgeRepository(database);
+  const commandCenterRepository = new DrizzleCommandCenterRepository(database);
+  const briefingRepository = new DrizzleBriefingRepository(database);
   const taskService = new TaskService(taskRepository, projectRepository, undefined, personRepository, meetingRepository);
   const requestService = new RequestService(requestRepository, personRepository, projectRepository, taskRepository, activityRepository, undefined, meetingRepository);
   return {
@@ -33,5 +37,7 @@ export function createWorkServices() {
     meetings: new MeetingService(meetingRepository, personRepository, projectRepository, taskRepository, requestRepository, taskService, requestService, activityRepository),
     calendar: new CalendarService(meetingRepository, taskRepository, projectRepository, requestRepository),
     knowledge: new KnowledgeService(knowledgeRepository, projectRepository, personRepository, meetingRepository, activityRepository),
+    commandCenter: new CommandCenterService(commandCenterRepository),
+    briefings: new BriefingService(commandCenterRepository, briefingRepository),
   };
 }

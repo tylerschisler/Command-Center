@@ -48,6 +48,8 @@ Show:
 
 Cards should be actionable and navigable.
 
+Phase 6 implements Home as an executive operating surface rather than a generic chart dashboard. Five compact metrics lead into capped Today’s Work, Attention Needed, Waiting On, Today’s Meetings, Project Health, and five-item Focus sections. Each recommendation shows its deterministic reason, and rows link to the owning workspace. Empty sections state which rule found no records. Briefing actions and the persisted library live on Home; an accessible side drawer shows the fact-derived rendering and explicitly identifies that no AI was used.
+
 ## My Work
 Primary views:
 - All
@@ -312,6 +314,8 @@ Accomplishments + changes + tomorrow.
 Major work, project progress, risks, dependencies, next week.
 
 Briefings should be persisted and searchable.
+
+Phase 6 supports explicit Morning, End-of-Day, and Weekly generation. Regeneration preserves the prior record as a separate snapshot. Morning is current and forward-looking; EOD and Weekly use ActivityEvents for accomplishments and changes, current records for outstanding risk, and current future dates for tomorrow or next week. Full global Briefing search and AI narrative remain later work.
 
 ## Important UX Rule
 The product should always provide a normal manual path for every critical workflow. AI must not be required to use core features.

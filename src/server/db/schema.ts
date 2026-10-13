@@ -287,6 +287,29 @@ export const entityRelationships = sqliteTable(
   ],
 );
 
+export const briefings = sqliteTable(
+  "briefings",
+  {
+    id: text("id").primaryKey(),
+    type: text("type", { enum: ["morning", "end_of_day", "weekly", "custom"] }).notNull(),
+    title: text("title").notNull(),
+    periodStart: text("period_start").notNull(),
+    periodEnd: text("period_end").notNull(),
+    structuredFacts: text("structured_facts", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    renderedContent: text("rendered_content").notNull(),
+    generatedAt: text("generated_at").notNull(),
+    aiGenerated: integer("ai_generated", { mode: "boolean" }).notNull().default(false),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("briefings_type_generated_idx").on(table.type, table.generatedAt),
+    index("briefings_period_idx").on(table.periodStart, table.periodEnd),
+    check("briefings_type_check", sql`${table.type} in ('morning','end_of_day','weekly','custom')`),
+    check("briefings_period_check", sql`${table.periodEnd} >= ${table.periodStart}`),
+    check("briefings_ai_generated_check", sql`${table.aiGenerated} in (0, 1)`),
+  ],
+);
+
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
@@ -310,3 +333,5 @@ export type KnowledgeVersion = typeof knowledgeVersions.$inferSelect;
 export type NewKnowledgeVersion = typeof knowledgeVersions.$inferInsert;
 export type EntityRelationship = typeof entityRelationships.$inferSelect;
 export type NewEntityRelationship = typeof entityRelationships.$inferInsert;
+export type Briefing = typeof briefings.$inferSelect;
+export type NewBriefing = typeof briefings.$inferInsert;
