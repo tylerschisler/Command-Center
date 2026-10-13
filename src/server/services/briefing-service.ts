@@ -55,7 +55,7 @@ export class BriefingService {
     if (!briefing) throw new NotFoundError("Briefing not found.");
     return briefing;
   }
-  generate(type: Exclude<BriefingType, "custom">, context: DashboardContext, source: "manual" | "system" = "manual"): Briefing {
+  generate(type: Exclude<BriefingType, "custom">, context: DashboardContext, source: "manual" | "system" | "jarvis" = "manual"): Briefing {
     assertContext(context);
     if (!(["morning", "end_of_day", "weekly"] as const).includes(type)) throw new ValidationError("This briefing type cannot be generated in Phase 6.");
     const snapshot = this.dashboardRepository.snapshot();

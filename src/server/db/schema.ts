@@ -310,6 +310,30 @@ export const briefings = sqliteTable(
   ],
 );
 
+export const aiSettings = sqliteTable("ai_settings", {
+  id: text("id").primaryKey(),
+  cloudAiEnabled: integer("cloud_ai_enabled", { mode: "boolean" }).notNull().default(false),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const aiUsageRecords = sqliteTable(
+  "ai_usage_records",
+  {
+    id: text("id").primaryKey(),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    requestTimestamp: text("request_timestamp").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    requestCount: integer("request_count").notNull().default(1),
+    estimatedCostMicros: integer("estimated_cost_micros"),
+  },
+  (table) => [
+    index("ai_usage_timestamp_idx").on(table.requestTimestamp),
+    check("ai_usage_token_check", sql`${table.inputTokens} >= 0 and ${table.outputTokens} >= 0 and ${table.requestCount} > 0`),
+  ],
+);
+
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
@@ -335,3 +359,6 @@ export type EntityRelationship = typeof entityRelationships.$inferSelect;
 export type NewEntityRelationship = typeof entityRelationships.$inferInsert;
 export type Briefing = typeof briefings.$inferSelect;
 export type NewBriefing = typeof briefings.$inferInsert;
+export type AiSettings = typeof aiSettings.$inferSelect;
+export type AiUsageRecord = typeof aiUsageRecords.$inferSelect;
+export type NewAiUsageRecord = typeof aiUsageRecords.$inferInsert;

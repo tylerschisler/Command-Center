@@ -27,6 +27,8 @@ npm run dev
 
 `Home` derives concise daily metrics, ranked attention, work, dependencies, meetings, project health, and Focus recommendations from persisted local data. Ranking is deterministic and displays its reasons. Morning, End-of-Day, and Weekly briefings persist both traceable structured facts and a human-readable local rendering; Phase 6 uses no AI or cloud dependency. Generation is manual, and regenerating preserves prior briefing snapshots.
 
+`Jarvis` opens with `⌘J` (or the top-bar button) as an integrated command/workspace surface. Cloud AI is off by default and can be enabled under Settings after `OPENAI_API_KEY` and `OPENAI_MODEL` are configured server-side. Jarvis uses an explicit, validated tool allowlist that calls application services; destructive, bulk, filesystem, database, backup, shell, and arbitrary-network tools are not exposed. Prompts and responses are short-lived and are not persisted. Local usage records contain provider/model, timestamps, request counts, and tokens only.
+
 ## Commands
 
 - `npm run db:generate` creates a migration after a schema change. Review the generated SQL before committing it.

@@ -43,6 +43,13 @@
       "when": 1791895839506,
       "tag": "0005_narrow_ogun",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791898874937,
+      "tag": "0006_flat_rhino",
+      "breakpoints": true
     }
   ]
 }

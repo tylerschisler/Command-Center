@@ -203,3 +203,11 @@ No internet should be required for:
 - tested restore
 - local-only primary persistence
 - cloud AI can be disabled
+
+## Phase 7 AI Boundary
+
+Cloud AI is disabled by default. Enabling it is an explicit local setting and does not affect local CRUD, search, briefings, encryption, backup, or recovery. `OPENAI_API_KEY` and `OPENAI_MODEL` are server-only environment values; settings reveal only configured/not-configured status.
+
+Jarvis sends a user prompt plus only context selected through allowlisted tools or the explicitly open Project/Knowledge record. Retrieved notes and Knowledge content are wrapped and labeled as untrusted application data and may never redefine system policy or tool permissions. Tool names and arguments are independently allowlisted and schema-validated; prompt instructions cannot create new capabilities. Structured provider output is validated and rendered without executable HTML.
+
+The OpenAI request uses `store: false`. Command Center does not persist prompts, responses, or conversational history. Encrypted `ai_usage_records` contain provider, model, timestamp, request/token counts, and an optional future cost field only. Application logs must not contain prompts, responses, API keys, database keys, recovery credentials, tool payloads, full Knowledge content, or backup material.

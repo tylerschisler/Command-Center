@@ -11,6 +11,7 @@ export default defineConfig({
     env: {
       COMMAND_CENTER_TEST_DATABASE_KEY_HEX: "11".repeat(32),
       DATABASE_PATH: path.join(os.tmpdir(), `command-center-playwright-${process.pid}.db`),
+      COMMAND_CENTER_FAKE_AI: "true",
     },
     url: "http://127.0.0.1:3000",
     reuseExistingServer: !process.env.CI,

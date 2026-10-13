@@ -384,3 +384,7 @@ Knowledge Page:
 
 Activity Event:
 - immutable historical record of what happened
+
+## Phase 7 AI Settings and Usage
+
+`ai_settings` is a singleton local preference record containing only the Cloud AI enabled flag and update timestamp. Cloud AI defaults off. `ai_usage_records` stores one local accounting row per provider request sequence: provider, model, request timestamp, input/output token counts, request count, and nullable estimated cost in micros. It never stores prompts, responses, tool arguments, API keys, or conversation history. Both tables reside inside the existing encrypted SQLite database.

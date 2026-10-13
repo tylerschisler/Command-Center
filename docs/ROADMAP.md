@@ -186,6 +186,8 @@ Implemented foundation:
 - browser-local date and IANA time-zone boundaries while retaining date-only domain semantics
 
 ## Phase 7 — Jarvis Text + Workspace
+
+Status: implemented in the `v0.7-jarvis` candidate; verification remains required before checkpointing.
 Build:
 - AI provider abstraction
 - OpenAI provider

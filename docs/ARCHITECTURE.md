@@ -322,3 +322,13 @@ Allow:
 - optional-service cutoff
 
 Core local features must continue working even if budget limit is reached.
+
+## Phase 7 Jarvis Implementation
+
+Phase 7 introduces a provider-neutral `AiProvider` boundary with an OpenAI Responses API implementation. The server performs a bounded tool loop (six rounds and twelve calls), uses strict function schemas, disables provider-side response storage, applies timeouts/retries, and validates the final structured workspace response with Zod. The browser never receives the API key and never calls the provider directly.
+
+`JarvisToolController` is the sole AI action boundary. Its explicit registry exposes narrowly scoped read and low-risk write tools; every tool validates arguments and calls an application service. There is no generic SQL, repository, filesystem, shell, backup, secret, arbitrary URL, archive, delete, or bulk-mutation tool. Unknown and significant actions fail closed. Mutation summaries are rebuilt from actual successful tool results, and entity references/navigation are retained only when grounded in retrieved or mutated IDs.
+
+The UI is a command surface and document-style Workspace, not a transcript. Provider output is a typed block schema rendered as React text and local entity links; raw HTML/Markdown and model-authored URLs are not rendered. Project and Knowledge detail views publish only explicit page context. Follow-up subject state exists only in browser memory.
+
+AI settings and aggregate usage are local encrypted records. Prompts and responses are not persisted. Deterministic Phase 6 facts remain authoritative for briefing generation; Phase 7 may present those facts but does not replace or rewrite them with model claims.

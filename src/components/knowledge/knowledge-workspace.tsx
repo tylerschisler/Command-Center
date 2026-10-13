@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { clearJarvisContext, publishJarvisContext } from "@/components/jarvis/jarvis-context";
 
 type Topic = { id: string; name: string; description: string | null };
 type Tag = { id: string; name: string };
@@ -37,6 +38,7 @@ export function KnowledgeRelationsPanel({ targetType, targetId, title = "Related
 
 export function KnowledgeWorkspace() {
   const [pages, setPages] = useState<KnowledgeItem[]>([]); const [topics, setTopics] = useState<Topic[]>([]); const [tags, setTags] = useState<Tag[]>([]); const [detail, setDetail] = useState<KnowledgeDetail | null>(null);
+  useEffect(() => { if (detail) publishJarvisContext({ entityType: "knowledge_page", entityId: detail.id, label: detail.title }); else clearJarvisContext(); return clearJarvisContext; }, [detail]);
   const [mode, setMode] = useState<"all" | "topics" | "tags" | "archived">("all"); const [topicId, setTopicId] = useState(""); const [tagId, setTagId] = useState(""); const [query, setQuery] = useState(""); const [editing, setEditing] = useState<KnowledgeDetail | "new" | null>(null); const [error, setError] = useState(""); const [loading, setLoading] = useState(true);
   const [targets, setTargets] = useState<Record<string, NamedTarget[]>>({ project: [], person: [], meeting: [], knowledge_page: [] }); const [relationshipType, setRelationshipType] = useState("project");
 

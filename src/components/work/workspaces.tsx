@@ -5,6 +5,7 @@ import { calendarToday, labels, PRIORITIES, PROJECT_HEALTH, PROJECT_STATUSES, TA
 import { WaitingOnWorkspace } from "@/components/relationships/workspaces";
 import { MeetingsPanel } from "@/components/calendar/calendar-workspace";
 import { KnowledgeRelationsPanel } from "@/components/knowledge/knowledge-workspace";
+import { clearJarvisContext, publishJarvisContext } from "@/components/jarvis/jarvis-context";
 
 type TaskItem = {
   id: string; title: string; description: string; status: (typeof TASK_STATUSES)[number]; priority: (typeof PRIORITIES)[number];
@@ -130,6 +131,7 @@ export function MyWorkWorkspace() {
 
 export function ProjectsWorkspace() {
   const [projects, setProjects] = useState<ProjectItem[]>([]); const [selectedId, setSelectedId] = useState<string | null>(null); const [detail, setDetail] = useState<ProjectDetail | null>(null);
+  useEffect(() => { if (detail) publishJarvisContext({ entityType: "project", entityId: detail.id, label: detail.name }); else clearJarvisContext(); return clearJarvisContext; }, [detail]);
   const [people, setPeople] = useState<PersonItem[]>([]);
   const [filter, setFilter] = useState("active"); const [tab, setTab] = useState("overview"); const [editingProject, setEditingProject] = useState<ProjectItem | "new" | null>(null); const [editingTask, setEditingTask] = useState<TaskItem | "new" | null>(null); const [error, setError] = useState(""); const [loading, setLoading] = useState(true);
   const loadProjects = useCallback(async () => { try { const [data, peopleData] = await Promise.all([api<{ projects: ProjectItem[] }>("/api/projects"), api<{ people: PersonItem[] }>("/api/people")]); setProjects(data.projects); setPeople(peopleData.people); setLoading(false); } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to load projects."); setLoading(false); } }, []);

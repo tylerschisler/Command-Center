@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { JarvisSurface } from "@/components/jarvis/jarvis-surface";
 
 export const navigation = [
   ["Home", "/"], ["My Work", "/my-work"], ["Projects", "/projects"],
@@ -19,7 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="local-status"><span aria-hidden="true" /> Local workspace</div>
       </aside>
       <div className="workspace">
-        <header className="topbar"><p>Personal operations</p><kbd>⌘ K</kbd></header>
+        <header className="topbar"><p>Personal operations</p><JarvisSurface /></header>
         <main id="main-content" tabIndex={-1}>{children}</main>
       </div>
     </div>

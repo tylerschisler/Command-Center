@@ -1,4 +1,4 @@
-import { getDatabase } from "@/server/db/client";
+import { getDatabase, type AppDatabase } from "@/server/db/client";
 import { DrizzleActivityEventRepository } from "@/server/repositories/activity-event-repository";
 import { DrizzleProjectRepository } from "@/server/repositories/project-repository";
 import { DrizzleTaskRepository } from "@/server/repositories/task-repository";
@@ -15,9 +15,9 @@ import { MeetingService } from "./meeting-service";
 import { CalendarService } from "./calendar-service";
 import { KnowledgeService } from "./knowledge-service";
 import { BriefingService, CommandCenterService } from "./briefing-service";
+import { ActivityService } from "./activity-service";
 
-export function createWorkServices() {
-  const database = getDatabase();
+export function createWorkServices(database: AppDatabase = getDatabase()) {
   const activityRepository = new DrizzleActivityEventRepository(database);
   const projectRepository = new DrizzleProjectRepository(database);
   const taskRepository = new DrizzleTaskRepository(database);
@@ -39,5 +39,6 @@ export function createWorkServices() {
     knowledge: new KnowledgeService(knowledgeRepository, projectRepository, personRepository, meetingRepository, activityRepository),
     commandCenter: new CommandCenterService(commandCenterRepository),
     briefings: new BriefingService(commandCenterRepository, briefingRepository),
+    activity: new ActivityService(activityRepository),
   };
 }

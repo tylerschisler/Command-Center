@@ -319,3 +319,9 @@ Phase 6 supports explicit Morning, End-of-Day, and Weekly generation. Regenerati
 
 ## Important UX Rule
 The product should always provide a normal manual path for every critical workflow. AI must not be required to use core features.
+
+# Phase 7 Jarvis interaction
+
+Jarvis is entered from the global `Ask Jarvis…` control or `⌘J`. The surface is a command palette that expands into a structured document workspace, never a chat transcript. Simple single mutations use an ambient confirmation, multiple successful mutations use an action summary with entity links, and analysis uses reusable heading, metric, reference, warning, recommendation, and briefing blocks. Follow-ups stay within the active browser session.
+
+When a Project or Knowledge Page is explicitly open, its typed ID and label—not page HTML—are passed as context. Ambiguity produces a clarification instead of a guessed mutation. Navigation is limited to known destinations and local validated entity IDs. Cloud AI settings clearly explain data egress and preserve all manual functionality when disabled.
