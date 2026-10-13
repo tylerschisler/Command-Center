@@ -38,6 +38,39 @@ Definition of Done:
 - migration workflow works
 - test/type/lint commands work
 
+## Phase 1.5 — Local Data Protection
+Build:
+- encrypted local database storage
+- macOS Keychain-backed master key
+- explicit plaintext-to-encrypted conversion
+- manual authenticated encrypted backup
+- backup validation
+- protected restore
+
+Definition of Done:
+- database cannot be queried without the valid key
+- key is not stored with application data or in Git
+- backup authentication and database integrity are verified
+- known records survive a complete backup/restore test
+- the active database is preserved before restore
+- automatic scheduling, retention, secondary destinations, management UI, and disaster-recovery hardening remain deferred to Phase 9
+
+## Phase 1.6 — Portable Recovery Credential
+Build:
+- high-entropy offline recovery credential
+- authenticated wrapping of the database master key
+- Keychain-loss verification and reconstruction
+- recovery material embedded in new `CCBACKUP1` backups
+- bounded encrypted pre-conversion and pre-restore copy lifecycle
+
+Definition of Done:
+- normal access still uses macOS Keychain
+- loss of the Keychain entry blocks normal access
+- the correct credential reconstructs Keychain only after database or backup validation
+- an incorrect credential fails closed
+- a recovery-enabled backup can move the data to a new Mac
+- no plaintext database or persisted plaintext credential is created
+
 ## Phase 2 — Tasks + Projects
 Build:
 - Task CRUD

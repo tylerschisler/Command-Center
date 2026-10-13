@@ -9,19 +9,40 @@ Requirements: Node.js 24+ and npm.
 ```sh
 cp .env.example .env
 npm install
+npm run db:encrypt
 npm run db:migrate
+npm run recovery:init
 npm run dev
 ```
 
-Open `http://localhost:3000`. The default database is stored at `./data/command-center.db`; it is ignored by Git and survives process restarts.
+`recovery:init` displays a recovery credential once. Save it offline or in a trusted password manager, separately from the Mac and its backups. Do not paste it into `.env` or save it in the repository. Open `http://localhost:3000`. The default database is stored at `./data/command-center.db`; it is ignored by Git and survives process restarts.
 
 ## Commands
 
 - `npm run db:generate` creates a migration after a schema change. Review the generated SQL before committing it.
 - `npm run db:migrate` safely applies pending versioned migrations.
+- `npm run db:encrypt` initializes encrypted storage or safely converts a Phase 1 plaintext database while preserving its predecessor.
+- `npm run backup:create -- [optional-path]` creates a manual authenticated encrypted backup.
+- `npm run backup:validate -- <path>` authenticates, decrypts, opens, and integrity-checks a backup.
+- `npm run backup:restore -- <path> --confirm` restores after protecting the active database; the confirmation flag is mandatory.
+- `npm run recovery:init` creates protected recovery material and displays the new credential once.
+- `npm run recovery:verify` prompts without echoing and verifies the credential against the active encrypted database.
+- `npm run recovery:restore-keychain` prompts for the credential, verifies the active database, and recreates the missing Keychain item.
+- `npm run recovery:restore-keychain -- <backup-path>` reconstructs Keychain from a recovery-enabled backup after fully validating that backup.
+- `npm run recovery:rotate` verifies the current credential, rewraps the unchanged database key, and displays a replacement credential once. Create a new backup immediately; old backups still require their old credential.
 - `npm run test` runs unit tests.
 - `npm run test:integration` applies migrations to a temporary on-disk database and verifies persistence across reopened connections.
 - `npm run test:e2e` boots the application and tests navigation in Chromium.
 - `npm run typecheck`, `npm run lint`, and `npm run build` perform static and production checks.
+
+## Recovery and moving to a new Mac
+
+Keep two things in separate safe locations: at least one validated `.ccbackup` file and the `CCREC1...` recovery credential that existed when that backup was created. The `.ccrecovery` file contains only protected key material and is included in new backups; it does not contain the credential.
+
+To recover on the same Mac after a Keychain item is lost, run `npm run recovery:restore-keychain` and enter the credential at the hidden prompt. To move using only a backup, install Command Center on the new Mac, copy the backup locally, run `npm run recovery:restore-keychain -- /path/to/backup.ccbackup`, then run `npm run backup:restore -- /path/to/backup.ccbackup --confirm`. Neither operation creates a plaintext database.
+
+If both the Keychain entry and the recovery credential are lost, the active database and encrypted backups cannot be recovered. Credential rotation does not rewrite old backups, so keep the prior credential until backups made under it have been intentionally retired.
+
+Encrypted `pre-encryption` copies are created only during explicit database conversion. Encrypted `pre-restore` copies are created immediately before an authenticated backup replaces the active database. They can be deleted once the active database is verified and a separate backup has been validated. Successful operations automatically keep only the three newest copies of each type; Phase 9 will add full retention and backup-management workflows.
 
 Do not implement later roadmap phases without first reviewing `AGENTS.md` and every file in `docs/`.

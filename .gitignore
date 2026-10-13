@@ -20,6 +20,8 @@ data/
 *.sqlite-*
 *.backup
 *.bak
+*.ccbackup
+*.ccrecovery
 backups/
 
 # OS/editor output

@@ -21,11 +21,11 @@ Database:
 - SQLite
 
 ORM:
-- Drizzle ORM with `better-sqlite3`
+- Drizzle ORM with the `better-sqlite3-multiple-ciphers` encrypted driver, installed through the `better-sqlite3` package alias expected by Drizzle
 - ORM purpose: typed, safer application-to-database access and schema migrations
 
 ### ORM Decision (Phase 1)
-Drizzle was selected over Prisma for the local-first SQLite foundation. It offers strongly typed TypeScript queries while staying close to SQLite and producing reviewable, versioned SQL migrations. Its small runtime surface and lack of a generated database client are a good fit for a single-user local application. `better-sqlite3` provides a direct synchronous local connection, which keeps transaction boundaries straightforward for the future requirement that a domain mutation and its `ActivityEvent` commit atomically.
+Drizzle was selected over Prisma for the local-first SQLite foundation. It offers strongly typed TypeScript queries while staying close to SQLite and producing reviewable, versioned SQL migrations. Its small runtime surface and lack of a generated database client are a good fit for a single-user local application. The `better-sqlite3` API provides a direct synchronous local connection, which keeps transaction boundaries straightforward for the future requirement that a domain mutation and its `ActivityEvent` commit atomically.
 
 Prisma would also provide good TypeScript ergonomics and a mature migration workflow, but its generated client and additional runtime abstraction are unnecessary at this stage. Drizzle's explicit SQL artifacts make migrations and future encryption-driver evaluation easier to inspect and maintain.
 
@@ -194,7 +194,19 @@ Target:
 - encrypted backup archives
 - no hosted database in V1
 
-Phase 1 uses a plaintext local SQLite development database so the schema, migrations, persistence, and service boundaries can be proven without choosing an immature encryption design. The connection is centralized in `src/server/db/client.ts`, which is the intended security hook for a later SQLCipher-compatible driver. Production encryption, OS-backed key storage, encrypted backups, restore points, and tested recovery remain Phase 9 work and must be completed before the V1 security acceptance criteria are met. There must be no production plaintext fallback.
+Phase 1 initially used a plaintext development database to prove the persistence boundaries. Phase 1.5 closes that gap with encrypted production storage and no plaintext fallback in the normal application connection path.
+
+### Phase 1.5 encryption decision
+Phase 1.5 replaces the stock `better-sqlite3` binary with the API-compatible `better-sqlite3-multiple-ciphers` build while retaining Drizzle, the synchronous repository contract, schemas, and migrations. The driver bundles SQLite3 Multiple Ciphers and is configured explicitly for its non-legacy sqleet scheme: ChaCha20 encryption with per-page Poly1305 authentication. Temporary SQLite storage is forced to memory because the currently bundled SQLite3 Multiple Ciphers version does not yet provide the newer encrypted temporary-file behavior.
+
+The application applies the cipher and 256-bit key before any schema access, then forces an immediate schema read so a wrong key fails during connection creation. Plaintext SQLite headers are rejected by the normal connection path; `npm run db:encrypt` is the explicit, recoverable conversion path for an earlier Phase 1 database. The conversion checks integrity, works on a copy, verifies the encrypted result, and preserves an encrypted pre-conversion copy without leaving a plaintext fallback.
+
+The master key is generated using Node's cryptographically secure random generator and stored as a generic secret in macOS Keychain through native Security-framework bindings supplied by `@napi-rs/keyring`. It is never written to environment files, database directories, backup files, logs, or Git. Production currently fails closed on platforms without macOS Keychain. Test-only deterministic key injection is available outside production through the `DatabaseKeyProvider` interface.
+
+### Phase 1.6 portable recovery
+Keychain remains the primary runtime key store. Recovery initialization generates an independent random 256-bit credential, displays it once, and uses scrypt (`N=131072`, `r=8`, `p=1`, random 256-bit salt) to derive a wrapping key. AES-256-GCM then wraps the existing database master key with authenticated versioned metadata. Only that protected envelope is stored at `RECOVERY_MATERIAL_PATH`; the credential is never persisted by the application. The envelope cannot open the database without the credential, and the credential is useless without an envelope copied with the application data or embedded in a recovery-enabled backup.
+
+`RecoveryService` owns initialization, verification, Keychain reconstruction, backup-assisted Keychain reconstruction, and credential rotation. Every candidate recovered key must successfully open and integrity-check the encrypted database, or authenticate and validate an entire `CCBACKUP1` archive, before it is written to Keychain. Recovery never decrypts SQLite into a plaintext file.
 
 ## Phase 1 Error Handling and Logging
 The Next.js error boundary presents a non-sensitive recovery message. Server logs use structured entries and redact context keys that commonly contain credentials. Callers must still avoid logging record bodies, prompts, notes, database paths, or other sensitive content. No telemetry or remote log transport is configured.
@@ -221,6 +233,8 @@ Backup contents:
 Backup encryption:
 - encrypt before writing the backup archive
 
+Phase 1.5 manual backups use the versioned `CCBACKUP1` binary envelope. Before capture, SQLite integrity is checked and WAL contents are checkpointed into the encrypted main database. The encrypted database bytes are read directly; a backup-specific 256-bit key is derived from the Keychain-held master key with HKDF-SHA-256 and a random salt, then the database image is encrypted again with AES-256-GCM. Non-secret metadata—including format version, ciphers, creation time, schema migration count, sizes, salt, nonce, and SHA-256—is authenticated as additional data. Phase 1.6 recovery-enabled backups also embed the independently AES-GCM-protected recovery envelope, never the recovery credential. Existing `CCBACKUP1` archives without that optional field remain valid but cannot bootstrap a lost Keychain. No plaintext database snapshot is written during backup creation.
+
 Backup destinations:
 - primary local folder
 - optional secondary folder chosen by user
@@ -232,6 +246,10 @@ Restore:
 - verify encryption/decryption
 - restore safely
 - preserve current data via restore point when practical
+
+Phase 1.5 restore validates the envelope authentication tag, database hash, encryption key, and SQLite integrity before replacement. It closes the application connection, checkpoints the current database, and renames the current encrypted file to a unique `pre-restore` copy before moving the validated restore into place. A failed final integrity check rolls the protected database back. The CLI requires an explicit `--confirm` argument.
+
+Pre-conversion copies are created only by an explicit plaintext conversion, after the source itself has been encrypted and the replacement has passed integrity validation. Pre-restore copies are created only after a backup has been authenticated and integrity-checked. They may be deleted after the active database has been reopened and verified and a separate backup is known good. Phase 1.6 automatically retains at most the three newest copies of each type after a successful operation; it never prunes the rollback copy before success. Scheduling, tiered backup retention, secondary destinations, backup-management UI, and the complete disaster-recovery workflow remain Phase 9 work.
 
 ## Restore Points
 Create lightweight restore points before:

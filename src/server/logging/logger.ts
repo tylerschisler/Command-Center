@@ -3,7 +3,7 @@ import { getEnvironment } from "@/config/env";
 type Context = Record<string, string | number | boolean | null | undefined>;
 type Level = "debug" | "info" | "warn" | "error";
 const rank: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
-const blocked = /secret|token|password|key|authorization|cookie/i;
+const blocked = /secret|token|password|key|credential|authorization|cookie/i;
 
 function sanitize(context: Context): Context {
   return Object.fromEntries(
