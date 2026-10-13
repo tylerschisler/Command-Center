@@ -5,6 +5,7 @@ import { activityEvents, tasks, type NewActivityEvent, type NewTask, type Task }
 export interface TaskListFilters {
   projectId?: string;
   personId?: string;
+  meetingId?: string;
   ownership?: "mine" | "delegated";
   status?: Task["status"];
   archived?: boolean;
@@ -37,6 +38,7 @@ export class DrizzleTaskRepository implements TaskRepository {
     conditions.push(filters.archived ? isNotNull(tasks.archivedAt) : isNull(tasks.archivedAt));
     if (filters.projectId) conditions.push(eq(tasks.projectId, filters.projectId));
     if (filters.personId) conditions.push(eq(tasks.ownerId, filters.personId));
+    if (filters.meetingId) conditions.push(eq(tasks.meetingId, filters.meetingId));
     if (filters.ownership === "mine") conditions.push(and(isNull(tasks.ownerId), isNull(tasks.unresolvedOwnerToken))!);
     if (filters.ownership === "delegated") conditions.push(isNotNull(tasks.ownerId));
     if (filters.status) conditions.push(eq(tasks.status, filters.status));

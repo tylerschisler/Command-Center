@@ -9,8 +9,8 @@ export async function GET(request: Request) {
     const url = new URL(request.url); const status = url.searchParams.get("status");
     if (status && !REQUEST_STATUSES.includes(status as RequestStatus)) throw new ValidationError("Invalid request status filter.");
     const filters: RequestListFilters = {};
-    const personId = url.searchParams.get("personId"); const projectId = url.searchParams.get("projectId");
-    if (personId) filters.personId = personId; if (projectId) filters.projectId = projectId; if (status) filters.status = status as RequestStatus;
+    const personId = url.searchParams.get("personId"); const projectId = url.searchParams.get("projectId"); const meetingId = url.searchParams.get("meetingId");
+    if (personId) filters.personId = personId; if (projectId) filters.projectId = projectId; if (meetingId) filters.meetingId = meetingId; if (status) filters.status = status as RequestStatus;
     return Response.json({ requests: createWorkServices().requests.listRequests(filters) });
   } catch (error) { return workErrorResponse(error); }
 }

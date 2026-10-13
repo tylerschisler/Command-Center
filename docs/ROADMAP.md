@@ -131,6 +131,14 @@ Definition of Done:
 - calendar renders all defined time-based entities
 - meeting notes and action items work without AI
 
+Implemented foundation:
+- encrypted versioned migration for Meetings, attendees, decisions, and durable action-item relationships
+- Meeting CRUD/lifecycle with atomic ActivityEvents, Project association, attendees, notes, and decisions
+- focused manual Meeting Mode with quick Tasks and Requests through existing services
+- Month, Week, Day, and Agenda projections without duplicate Calendar storage
+- functional Person and Project Meeting sections
+- UTC instant storage for Meetings while preserving existing date-only semantics
+
 ## Phase 5 — Knowledge Library
 Build:
 - KnowledgePage CRUD

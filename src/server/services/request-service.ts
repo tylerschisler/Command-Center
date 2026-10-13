@@ -6,6 +6,7 @@ import type { PersonRepository } from "@/server/repositories/person-repository";
 import type { ProjectRepository } from "@/server/repositories/project-repository";
 import type { RequestListFilters, RequestRepository } from "@/server/repositories/request-repository";
 import type { TaskRepository } from "@/server/repositories/task-repository";
+import type { MeetingRepository } from "@/server/repositories/meeting-repository";
 import { NotFoundError, ValidationError } from "./service-errors";
 import { idSchema, requestCreateSchema, requestUpdateSchema } from "./work-validation";
 
@@ -19,6 +20,7 @@ export class RequestService {
     private readonly tasks: TaskRepository,
     private readonly activity: ActivityEventRepository,
     private readonly now: () => Date = () => new Date(),
+    private readonly meetings?: MeetingRepository,
   ) {}
   createRequest(input: unknown): RequestView {
     const parsed = requestCreateSchema.parse(input); this.assertRelations(parsed);
@@ -60,10 +62,11 @@ export class RequestService {
     const timestamp = this.now().toISOString(); const updated = this.repository.update(id, { archivedAt, updatedAt: timestamp }, this.event(type, id, `${archivedAt ? "Archived" : "Restored"} request “${existing.title}”.`, source, {}, timestamp));
     if (!updated) throw new NotFoundError("Request not found."); return this.toView(updated);
   }
-  private assertRelations(input: { requestedFromPersonId?: string; projectId?: string | null; relatedTaskId?: string | null }) {
+  private assertRelations(input: { requestedFromPersonId?: string; projectId?: string | null; relatedTaskId?: string | null; meetingId?: string | null }) {
     if (input.requestedFromPersonId && !this.people.findById(input.requestedFromPersonId)) throw new ValidationError("The selected person does not exist.");
     if (input.projectId && !this.projects.findById(input.projectId)) throw new ValidationError("The selected project does not exist.");
     if (input.relatedTaskId && !this.tasks.findById(input.relatedTaskId)) throw new ValidationError("The related task does not exist.");
+    if (input.meetingId && this.meetings && !this.meetings.findById(input.meetingId)) throw new ValidationError("The selected meeting does not exist.");
   }
   private toView(request: WorkRequest): RequestView {
     const person = this.people.findById(request.requestedFromPersonId); if (!person) throw new ValidationError("The request has an invalid person relationship.");

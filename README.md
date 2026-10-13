@@ -1,6 +1,6 @@
 # Command Center
 
-Local-first personal productivity and project-management software. Phase 3 provides manual Task, Project, Person, and Request management, deterministic progress/risk indicators, encrypted SQLite persistence, and durable activity history.
+Local-first personal productivity and project-management software. Phase 4 provides manual Task, Project, Person, Request, Meeting, and Calendar workflows, deterministic projections/risk indicators, encrypted SQLite persistence, and durable activity history.
 
 ## Local setup
 
@@ -20,6 +20,8 @@ npm run dev
 `My Work` supports All, Mine, Delegated, Today, Upcoming, and Completed views. `Projects` provides project creation/editing, overview metrics, associated tasks, and activity. Target dates are planned dates; due dates are required deadlines. They are never adjusted automatically, and the UI warns when target is later than due.
 
 `People` manages lightweight work contacts and derives their open delegated Tasks, outstanding Requests, and related Projects. `Waiting On` tracks what another Person owes, with All, Overdue, Due Soon, Follow-Up Needed, and Received views. Legacy anonymous Phase 2 delegated owners remain visible as unresolved until a real Person is selected; they are never silently assigned.
+
+`Calendar` provides Month, Week, Day, and Agenda projections over Meetings and existing Task, Project, and Request dates. Meeting Mode supports attendees, live notes, decisions, quick Tasks, quick Requests, and explicit start/end actions. Calendar records are never duplicated into a separate event table.
 
 ## Commands
 

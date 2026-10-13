@@ -6,6 +6,7 @@ export interface RequestListFilters {
   personId?: string;
   projectId?: string;
   relatedTaskId?: string;
+  meetingId?: string;
   status?: WorkRequest["status"];
   archived?: boolean;
 }
@@ -30,6 +31,7 @@ export class DrizzleRequestRepository implements RequestRepository {
     if (filters.personId) conditions.push(eq(requests.requestedFromPersonId, filters.personId));
     if (filters.projectId) conditions.push(eq(requests.projectId, filters.projectId));
     if (filters.relatedTaskId) conditions.push(eq(requests.relatedTaskId, filters.relatedTaskId));
+    if (filters.meetingId) conditions.push(eq(requests.meetingId, filters.meetingId));
     if (filters.status) conditions.push(eq(requests.status, filters.status));
     return this.database.select().from(requests).where(and(...conditions)).orderBy(asc(requests.dueDate), desc(requests.updatedAt)).all();
   }

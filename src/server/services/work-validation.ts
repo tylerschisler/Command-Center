@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PRIORITIES, PROJECT_HEALTH, PROJECT_STATUSES, REQUEST_STATUSES, TASK_STATUSES } from "@/domain/work";
+import { MEETING_STATUSES, PRIORITIES, PROJECT_HEALTH, PROJECT_STATUSES, REQUEST_STATUSES, TASK_STATUSES } from "@/domain/work";
 
 const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a valid YYYY-MM-DD date.").refine((value) => {
   const parsed = new Date(`${value}T00:00:00.000Z`);
@@ -16,6 +16,7 @@ export const taskCreateSchema = z.object({
   priority: z.enum(PRIORITIES).default("medium"),
   ownerId: nullableId,
   projectId: nullableId,
+  meetingId: nullableId,
   startDate: nullableDate,
   targetDate: nullableDate,
   dueDate: nullableDate,
@@ -67,8 +68,24 @@ export const requestCreateSchema = z.object({
   closedDate: nullableDate,
   projectId: nullableId,
   relatedTaskId: nullableId,
+  meetingId: nullableId,
   source,
 });
 export const requestUpdateSchema = requestCreateSchema.omit({ source: true }).partial().extend({ source });
+
+const dateTime = z.string().datetime({ offset: true });
+const meetingFields = z.object({
+  title: z.string().trim().min(1).max(200),
+  startDateTime: dateTime,
+  endDateTime: dateTime,
+  location: z.string().trim().max(500).nullable().optional(),
+  agenda: z.string().trim().max(20_000).nullable().optional(),
+  notes: z.string().trim().max(100_000).nullable().optional(),
+  status: z.enum(MEETING_STATUSES),
+  projectId: nullableId,
+});
+export const meetingCreateSchema = meetingFields.extend({ status: z.enum(MEETING_STATUSES).default("scheduled"), participantIds: z.array(z.string().uuid()).max(500).default([]).transform((ids) => [...new Set(ids)]), source }).refine((value) => value.endDateTime >= value.startDateTime, { message: "Meeting end time cannot be before its start time.", path: ["endDateTime"] });
+export const meetingUpdateSchema = meetingFields.partial().extend({ source });
+export const decisionCreateSchema = z.object({ content: z.string().trim().min(1).max(10_000), source });
 
 export const idSchema = z.string().uuid();

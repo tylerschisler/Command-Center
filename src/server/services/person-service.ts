@@ -5,6 +5,7 @@ import type { PersonRepository } from "@/server/repositories/person-repository";
 import type { ProjectRepository } from "@/server/repositories/project-repository";
 import type { RequestRepository } from "@/server/repositories/request-repository";
 import type { TaskRepository } from "@/server/repositories/task-repository";
+import type { MeetingRepository } from "@/server/repositories/meeting-repository";
 import { NotFoundError } from "./service-errors";
 import { idSchema, personCreateSchema, personUpdateSchema } from "./work-validation";
 
@@ -18,6 +19,7 @@ export class PersonService {
     private readonly projects: ProjectRepository,
     private readonly activity: ActivityEventRepository,
     private readonly now: () => Date = () => new Date(),
+    private readonly meetings?: MeetingRepository,
   ) {}
 
   createPerson(input: unknown): PersonSummary {
@@ -38,6 +40,7 @@ export class PersonService {
     return {
       ...this.toSummary(person), tasks, requests,
       projects: this.projects.list().filter((project) => projectIds.has(project.id)),
+      meetings: this.meetings?.list({ personId: id }) ?? [],
       activity: this.activity.listByEntity("person", id),
     };
   }
@@ -71,7 +74,8 @@ export class PersonService {
   private toSummary(person: Person): PersonSummary {
     const personTasks = this.tasks.list({ personId: person.id });
     const personRequests = this.requests.list({ personId: person.id });
-    const projectIds = new Set([...personTasks.map((item) => item.projectId), ...personRequests.map((item) => item.projectId)].filter(Boolean));
+    const personMeetings = this.meetings?.list({ personId: person.id }) ?? [];
+    const projectIds = new Set([...personTasks.map((item) => item.projectId), ...personRequests.map((item) => item.projectId), ...personMeetings.map((item) => item.projectId)].filter(Boolean));
     return {
       ...person,
       openTaskCount: personTasks.filter((item) => item.status !== "completed").length,

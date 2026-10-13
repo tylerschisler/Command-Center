@@ -46,6 +46,7 @@ Fields:
 - priority
 - ownerId (optional)
 - projectId (optional)
+- meetingId (optional; durable source/relationship for meeting action items)
 - startDate
 - targetDate
 - dueDate
@@ -80,6 +81,7 @@ Fields:
 - closedDate
 - projectId (optional)
 - relatedTaskId (optional)
+- meetingId (optional; durable source/relationship for meeting action items)
 - createdAt
 - updatedAt
 - archivedAt
@@ -126,6 +128,7 @@ Fields:
 - projectId (optional)
 - createdAt
 - updatedAt
+- archivedAt
 
 Relationships:
 - participants
@@ -135,10 +138,23 @@ Relationships:
 - decisions
 - activity
 
+Phase 4 stores Meetings in `meetings`, with constrained Scheduled/In Progress/Completed/Cancelled status and an optional Project foreign key. `startDateTime` and `endDateTime` are canonical UTC ISO-8601 instants; clients convert local `datetime-local` input to an instant and render it in the local application time zone. End must be at or after start in both service validation and a database CHECK. Notes and agenda remain simple text so Phase 5 Knowledge structures are not preempted.
+
 ## MeetingParticipant
 Fields:
 - meetingId
 - personId
+
+`meeting_participants` is a composite-key join table. It stores no duplicated Person attributes; names and other contact details are always read from `people`. Deleting a Meeting removes its joins, while People are otherwise managed independently.
+
+## MeetingDecision
+Fields:
+- id
+- meetingId
+- content
+- createdAt
+
+Decisions are deliberately minimal structured Meeting records. They appear in Meeting detail and produce `MEETING_DECISION_ADDED` activity.
 
 ## KnowledgePage
 Fields:
@@ -330,6 +346,8 @@ Calendar renders time-based fields from:
 - Project.dueDate
 - Request.dueDate
 - Request.followUpDate
+
+Phase 4 implements this as a read-only `CalendarService` projection. Meeting instants are converted to their local calendar day for display. Task, Project, and Request fields remain independent `YYYY-MM-DD` calendar dates and are projected as distinct Target, Due, or Follow-Up events. There is no Calendar table.
 
 ## Journal Model
 No standalone daily journal required for system activity.

@@ -4,6 +4,7 @@ import type { NewActivityEvent, NewTask, Task } from "@/server/db/schema";
 import type { ProjectRepository } from "@/server/repositories/project-repository";
 import type { PersonRepository } from "@/server/repositories/person-repository";
 import type { TaskListFilters, TaskRepository } from "@/server/repositories/task-repository";
+import type { MeetingRepository } from "@/server/repositories/meeting-repository";
 import { NotFoundError, ValidationError } from "./service-errors";
 import { idSchema, taskCreateSchema, taskUpdateSchema } from "./work-validation";
 
@@ -15,6 +16,7 @@ export class TaskService {
     private readonly projects: ProjectRepository,
     private readonly now: () => Date = () => new Date(),
     private readonly people?: PersonRepository,
+    private readonly meetings?: MeetingRepository,
   ) {}
 
   createTask(input: unknown): TaskView {
@@ -22,6 +24,7 @@ export class TaskService {
     if (parsed.status !== "completed" && parsed.completedDate) throw new ValidationError("A completion date requires Completed status.");
     this.assertProject(parsed.projectId);
     this.assertPerson(parsed.ownerId);
+    this.assertMeeting(parsed.meetingId);
     const { source, ...values } = parsed;
     const now = this.now();
     const timestamp = now.toISOString();
@@ -59,6 +62,7 @@ export class TaskService {
     const { source, ...requested } = parsed;
     if (requested.projectId !== undefined) this.assertProject(requested.projectId);
     if (requested.ownerId !== undefined) this.assertPerson(requested.ownerId);
+    if (requested.meetingId !== undefined) this.assertMeeting(requested.meetingId);
     const nextStatus = requested.status ?? existing.status;
     if (nextStatus !== "completed" && requested.completedDate) throw new ValidationError("A completion date requires Completed status.");
     const changes: Partial<NewTask> = { ...requested };
@@ -109,6 +113,9 @@ export class TaskService {
   }
   private assertPerson(personId: string | null | undefined) {
     if (personId && (!this.people || !this.people.findById(personId))) throw new ValidationError("The selected person does not exist.");
+  }
+  private assertMeeting(meetingId: string | null | undefined) {
+    if (meetingId && this.meetings && !this.meetings.findById(meetingId)) throw new ValidationError("The selected meeting does not exist.");
   }
 
   private today() { return calendarToday(this.now()); }

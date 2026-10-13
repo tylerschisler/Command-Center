@@ -8,10 +8,12 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const ownership = url.searchParams.get("ownership");
     const projectId = url.searchParams.get("projectId") ?? undefined;
+    const meetingId = url.searchParams.get("meetingId") ?? undefined;
     if (ownership && ownership !== "mine" && ownership !== "delegated") throw new ValidationError("Invalid ownership filter.");
     const filters: TaskListFilters = {};
     if (ownership === "mine" || ownership === "delegated") filters.ownership = ownership;
     if (projectId) filters.projectId = projectId;
+    if (meetingId) filters.meetingId = meetingId;
     return Response.json({ tasks: createWorkServices().tasks.listTasks(filters) });
   } catch (error) { return workErrorResponse(error); }
 }

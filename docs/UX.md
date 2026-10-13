@@ -143,6 +143,8 @@ Render:
 
 Use clear visual distinctions by event type.
 
+Phase 4 implements all four views with Meeting, Target, Due, and Follow-Up labels and entity-specific visual treatments. Selecting a Meeting opens its detail and Meeting Mode in context; selecting other projected records navigates to their owning workspace. Calendar navigation changes the visible Month, Week, or Day without creating records.
+
 ## Meetings
 Meeting detail:
 - title
@@ -166,6 +168,8 @@ Focused in-meeting view:
 - end meeting
 
 V1 voice capture should support user-directed notes, not continuous full-meeting recording.
+
+Phase 4 Meeting Mode is fully manual: start/end lifecycle controls, editable live notes, attendee management, decisions, quick Tasks, and quick Requests. Voice and AI controls remain absent until their later phases.
 
 ## People
 People list should show:

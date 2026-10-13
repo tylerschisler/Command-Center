@@ -98,6 +98,14 @@ Task ownership now has three intentional storage states. Mine has no external ow
 
 The People and Waiting On client workspaces call only application route handlers. Project detail embeds the same filtered Waiting On view rather than querying Drizzle. Meetings and richer Notes remain explicit Phase 4+ placeholders.
 
+Phase 4 adds `MeetingService`/`MeetingRepository` and `CalendarService`. Meetings, attendee joins, and decisions are persisted locally; every meaningful Meeting write and its `ActivityEvent` share one SQLite transaction. Meeting creation may also insert initial attendee joins and their events in that transaction. Meeting Mode calls the existing `TaskService` and `RequestService` for action items rather than duplicating their validation or mutation logic.
+
+Tasks and Requests each receive a nullable `meetingId` foreign key with `SET NULL` behavior. This is the smallest durable relationship for action items created from or attached to one Meeting, and avoids introducing the broader generic relationship framework before it is needed. Meeting detail queries those explicit relationships; it never reconstructs them from ActivityEvents.
+
+Meeting timestamps are stored as canonical UTC ISO-8601 instants after local browser input is converted with the platform time-zone rules. They render through the local application time zone, preserving the instant and the expected local display on the originating machine. Task, Project, and Request date-only values remain unchanged.
+
+`CalendarService` is a read-only application projection over Meeting start instants, Task/Project target and due dates, and Request due/follow-up dates. It returns typed events with entity IDs and event kinds for navigation. No duplicate Calendar persistence or direct UI-to-repository path is introduced.
+
 ## Activity Logging
 Meaningful mutations must create ActivityEvents.
 

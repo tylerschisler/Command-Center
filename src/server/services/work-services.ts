@@ -4,10 +4,13 @@ import { DrizzleProjectRepository } from "@/server/repositories/project-reposito
 import { DrizzleTaskRepository } from "@/server/repositories/task-repository";
 import { DrizzlePersonRepository } from "@/server/repositories/person-repository";
 import { DrizzleRequestRepository } from "@/server/repositories/request-repository";
+import { DrizzleMeetingRepository } from "@/server/repositories/meeting-repository";
 import { ProjectService } from "./project-service";
 import { TaskService } from "./task-service";
 import { PersonService } from "./person-service";
 import { RequestService } from "./request-service";
+import { MeetingService } from "./meeting-service";
+import { CalendarService } from "./calendar-service";
 
 export function createWorkServices() {
   const database = getDatabase();
@@ -16,10 +19,15 @@ export function createWorkServices() {
   const taskRepository = new DrizzleTaskRepository(database);
   const personRepository = new DrizzlePersonRepository(database);
   const requestRepository = new DrizzleRequestRepository(database);
+  const meetingRepository = new DrizzleMeetingRepository(database);
+  const taskService = new TaskService(taskRepository, projectRepository, undefined, personRepository, meetingRepository);
+  const requestService = new RequestService(requestRepository, personRepository, projectRepository, taskRepository, activityRepository, undefined, meetingRepository);
   return {
-    tasks: new TaskService(taskRepository, projectRepository, undefined, personRepository),
+    tasks: taskService,
     projects: new ProjectService(projectRepository, taskRepository, activityRepository),
-    people: new PersonService(personRepository, taskRepository, requestRepository, projectRepository, activityRepository),
-    requests: new RequestService(requestRepository, personRepository, projectRepository, taskRepository, activityRepository),
+    people: new PersonService(personRepository, taskRepository, requestRepository, projectRepository, activityRepository, undefined, meetingRepository),
+    requests: requestService,
+    meetings: new MeetingService(meetingRepository, personRepository, projectRepository, taskRepository, requestRepository, taskService, requestService, activityRepository),
+    calendar: new CalendarService(meetingRepository, taskRepository, projectRepository, requestRepository),
   };
 }

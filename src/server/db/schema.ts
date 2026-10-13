@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const activityEvents = sqliteTable(
   "activity_events",
@@ -69,6 +69,53 @@ export const projects = sqliteTable(
   ],
 );
 
+export const meetings = sqliteTable(
+  "meetings",
+  {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    startDateTime: text("start_date_time").notNull(),
+    endDateTime: text("end_date_time").notNull(),
+    location: text("location"),
+    agenda: text("agenda"),
+    notes: text("notes"),
+    status: text("status", { enum: ["scheduled", "in_progress", "completed", "cancelled"] }).notNull(),
+    projectId: text("project_id").references(() => projects.id, { onDelete: "set null" }),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    archivedAt: text("archived_at"),
+  },
+  (table) => [
+    index("meetings_start_idx").on(table.startDateTime),
+    index("meetings_project_id_idx").on(table.projectId),
+    index("meetings_status_idx").on(table.status),
+    index("meetings_archived_at_idx").on(table.archivedAt),
+    check("meetings_status_check", sql`${table.status} in ('scheduled','in_progress','completed','cancelled')`),
+    check("meetings_time_check", sql`${table.endDateTime} >= ${table.startDateTime}`),
+  ],
+);
+
+export const meetingParticipants = sqliteTable(
+  "meeting_participants",
+  {
+    meetingId: text("meeting_id").notNull().references(() => meetings.id, { onDelete: "cascade" }),
+    personId: text("person_id").notNull().references(() => people.id, { onDelete: "cascade" }),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.meetingId, table.personId] }), index("meeting_participants_person_idx").on(table.personId)],
+);
+
+export const meetingDecisions = sqliteTable(
+  "meeting_decisions",
+  {
+    id: text("id").primaryKey(),
+    meetingId: text("meeting_id").notNull().references(() => meetings.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [index("meeting_decisions_meeting_idx").on(table.meetingId)],
+);
+
 export const tasks = sqliteTable(
   "tasks",
   {
@@ -80,6 +127,7 @@ export const tasks = sqliteTable(
     ownerId: text("owner_id").references(() => people.id, { onDelete: "set null" }),
     unresolvedOwnerToken: text("unresolved_owner_token"),
     projectId: text("project_id").references(() => projects.id, { onDelete: "set null" }),
+    meetingId: text("meeting_id").references(() => meetings.id, { onDelete: "set null" }),
     startDate: text("start_date"),
     targetDate: text("target_date"),
     dueDate: text("due_date"),
@@ -92,6 +140,7 @@ export const tasks = sqliteTable(
   },
   (table) => [
     index("tasks_project_id_idx").on(table.projectId),
+    index("tasks_meeting_id_idx").on(table.meetingId),
     index("tasks_status_idx").on(table.status),
     index("tasks_owner_id_idx").on(table.ownerId),
     index("tasks_unresolved_owner_token_idx").on(table.unresolvedOwnerToken),
@@ -118,6 +167,7 @@ export const requests = sqliteTable(
     closedDate: text("closed_date"),
     projectId: text("project_id").references(() => projects.id, { onDelete: "set null" }),
     relatedTaskId: text("related_task_id").references(() => tasks.id, { onDelete: "set null" }),
+    meetingId: text("meeting_id").references(() => meetings.id, { onDelete: "set null" }),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     archivedAt: text("archived_at"),
@@ -126,6 +176,7 @@ export const requests = sqliteTable(
     index("requests_person_id_idx").on(table.requestedFromPersonId),
     index("requests_project_id_idx").on(table.projectId),
     index("requests_task_id_idx").on(table.relatedTaskId),
+    index("requests_meeting_id_idx").on(table.meetingId),
     index("requests_status_idx").on(table.status),
     index("requests_due_date_idx").on(table.dueDate),
     index("requests_archived_at_idx").on(table.archivedAt),
@@ -142,3 +193,8 @@ export type Person = typeof people.$inferSelect;
 export type NewPerson = typeof people.$inferInsert;
 export type WorkRequest = typeof requests.$inferSelect;
 export type NewWorkRequest = typeof requests.$inferInsert;
+export type Meeting = typeof meetings.$inferSelect;
+export type NewMeeting = typeof meetings.$inferInsert;
+export type MeetingParticipant = typeof meetingParticipants.$inferSelect;
+export type MeetingDecision = typeof meetingDecisions.$inferSelect;
+export type NewMeetingDecision = typeof meetingDecisions.$inferInsert;
