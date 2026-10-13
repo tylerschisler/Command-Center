@@ -35,6 +35,8 @@ Relationships:
 - Knowledge Pages
 - Activity Events
 
+Phase 2 storage uses the `projects` table with UUID text IDs, constrained status/health/priority values, ISO `YYYY-MM-DD` calendar dates, ISO timestamps for created/updated/archive audit fields, and no Milestone entity. `ownerId` remains nullable and intentionally has no Person foreign key until Phase 3.
+
 ## Task
 Fields:
 - id
@@ -58,6 +60,10 @@ Rules:
 - targetDate may be before or after dueDate.
 - If targetDate > dueDate, surface risk.
 - Tasks may be owned by the user or another Person.
+
+Phase 2 storage uses the `tasks` table with UUID text IDs and a nullable `projectId` foreign key. Removing a Project relationship sets `projectId` to null rather than deleting the Task. Status and priority are database-constrained. Dates are independent ISO `YYYY-MM-DD` values. `estimatedEffort` is optional non-negative minutes. `recurrenceRuleId` is reserved as a nullable UUID without recurrence behavior or a premature RecurrenceRule table.
+
+Until Phase 3 introduces People, `ownerId = null` means the current user (Mine). A non-null UUID means Delegated, but does not claim a Person record exists. The Phase 2 UI generates an opaque UUID when work is marked delegated; Phase 3 must replace or map that token when a real Person is assigned.
 
 ## Request
 Fields:

@@ -1,6 +1,6 @@
 # Command Center
 
-Local-first personal productivity and project-management software. Phase 1 provides the application shell, local SQLite persistence, migration workflow, application-service boundary, and durable activity-event foundation.
+Local-first personal productivity and project-management software. Phase 2 provides manual Task and Project management, deterministic progress and schedule-risk indicators, encrypted SQLite persistence, and durable activity history.
 
 ## Local setup
 
@@ -16,6 +16,8 @@ npm run dev
 ```
 
 `recovery:init` displays a recovery credential once. Save it offline or in a trusted password manager, separately from the Mac and its backups. Do not paste it into `.env` or save it in the repository. Open `http://localhost:3000`. The default database is stored at `./data/command-center.db`; it is ignored by Git and survives process restarts.
+
+`My Work` supports All, Mine, Delegated, Today, Upcoming, and Completed views. `Projects` provides project creation/editing, overview metrics, associated tasks, and activity. Target dates are planned dates; due dates are required deadlines. They are never adjusted automatically, and the UI warns when target is later than due.
 
 ## Commands
 

@@ -88,6 +88,14 @@ Definition of Done:
 - target-after-due risk surfaces
 - every meaningful mutation creates ActivityEvent
 
+Implemented foundation:
+- encrypted migrations for `projects` and `tasks`
+- service-only CRUD, completion, archive, and restore operations
+- atomic ActivityEvents for meaningful mutations
+- My Work filters and fast task editor
+- Project list, overview, tasks, activity, progress, and deterministic risk states
+- temporary Mine/Delegated ownership convention pending Phase 3 People
+
 ## Phase 3 — People + Waiting On
 Build:
 - Person CRUD

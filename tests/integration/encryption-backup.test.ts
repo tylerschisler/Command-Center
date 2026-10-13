@@ -6,9 +6,13 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { afterEach, describe, expect, it } from "vitest";
 import { createDatabase } from "@/server/db/client";
 import { DrizzleActivityEventRepository } from "@/server/repositories/activity-event-repository";
+import { DrizzleProjectRepository } from "@/server/repositories/project-repository";
+import { DrizzleTaskRepository } from "@/server/repositories/task-repository";
 import { StaticDatabaseKeyProvider } from "@/server/security/database-key-provider";
 import { ActivityService } from "@/server/services/activity-service";
 import { BackupService } from "@/server/services/backup-service";
+import { ProjectService } from "@/server/services/project-service";
+import { TaskService } from "@/server/services/task-service";
 
 const tempDirectories: string[] = [];
 afterEach(() => tempDirectories.splice(0).forEach((directory) => fs.rmSync(directory, { recursive: true, force: true })));
@@ -32,6 +36,11 @@ describe("encrypted database backup and restore", () => {
       source: "system",
       metadata: {},
     });
+    const projectRepository = new DrizzleProjectRepository(database);
+    const taskRepository = new DrizzleTaskRepository(database);
+    const project = new ProjectService(projectRepository, taskRepository, new DrizzleActivityEventRepository(database))
+      .createProject({ name: "Backup project", status: "active" });
+    const task = new TaskService(taskRepository, projectRepository).createTask({ title: "Backup task", projectId: project.id });
     database.$client.close();
 
     expect(fs.readFileSync(databasePath).subarray(0, 16).toString("binary")).not.toBe("SQLite format 3\0");
@@ -64,6 +73,8 @@ describe("encrypted database backup and restore", () => {
     expect(restoredActivity.forEntity("system", "backup-test")).toHaveLength(1);
     expect(restoredActivity.forEntity("system", "after-backup")).toHaveLength(0);
     expect(restoredActivity.forEntity("backup", backup.metadata.backupId)[0]?.eventType).toBe("BACKUP_RESTORED");
+    expect(new TaskService(new DrizzleTaskRepository(reopened), new DrizzleProjectRepository(reopened)).getTask(task.id))
+      .toMatchObject({ title: "Backup task", projectId: project.id });
     reopened.$client.close();
   });
 });

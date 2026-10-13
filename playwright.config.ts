@@ -1,13 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
+import os from "node:os";
+import path from "node:path";
 
 export default defineConfig({
   testDir: "./tests/e2e",
   use: { baseURL: "http://127.0.0.1:3000", trace: "on-first-retry" },
   webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1",
+    command: "node --import tsx scripts/e2e-server.ts",
     env: {
       COMMAND_CENTER_TEST_DATABASE_KEY_HEX: "11".repeat(32),
-      DATABASE_PATH: `/tmp/command-center-playwright-${process.pid}.db`,
+      DATABASE_PATH: path.join(os.tmpdir(), `command-center-playwright-${process.pid}.db`),
     },
     url: "http://127.0.0.1:3000",
     reuseExistingServer: !process.env.CI,

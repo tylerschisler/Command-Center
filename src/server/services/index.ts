@@ -5,12 +5,15 @@ import { getDefaultDatabaseKeyProvider, MacOsKeychainKeyProvider } from "@/serve
 import { ActivityService } from "./activity-service";
 import { BackupService } from "./backup-service";
 import { RecoveryService } from "./recovery-service";
+import { createWorkServices } from "./work-services";
 
 export function createServices() {
   const database = getDatabase();
   const environment = getEnvironment();
+  const activityRepository = new DrizzleActivityEventRepository(database);
   return {
-    activity: new ActivityService(new DrizzleActivityEventRepository(database)),
+    activity: new ActivityService(activityRepository),
+    ...createWorkServices(),
     backup: new BackupService({
       databasePath: environment.DATABASE_PATH,
       backupDirectory: environment.BACKUP_DIRECTORY,

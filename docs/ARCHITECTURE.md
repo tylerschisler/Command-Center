@@ -88,6 +88,12 @@ Each service should own domain logic for its entity.
 
 Phase 1 establishes this boundary with `ActivityService`, an `ActivityEventRepository` interface, and a Drizzle repository implementation. UI and future AI controllers depend on application services; only repository implementations may use the ORM. Future meaningful mutations should use a shared database transaction for the domain write and `ActivityEvent` creation.
 
+Phase 2 adds `TaskService` and `ProjectService` with `TaskRepository` and `ProjectRepository` contracts. Next.js route handlers are thin transport adapters: they validate the HTTP shape, label the source as manual, and call services. Client UI never imports repositories or Drizzle. Repository mutation methods commit the domain row and its immutable `ActivityEvent` in one SQLite transaction, so a partial audit history cannot be produced.
+
+Task and Project inputs are validated with Zod and database CHECK constraints. Calendar dates use `YYYY-MM-DD` strings so target and due dates retain date-only semantics. Target-after-due and overdue states are derived without changing stored dates or Project health. Project progress is deterministic: completed non-archived tasks divided by all non-archived tasks, rounded to a whole percentage; zero tasks is shown as “No tasks” and 0%.
+
+Phase 2 ownership is transitional: null `ownerId` means the current user and non-null means delegated. No People table or foreign key is introduced before Phase 3. The UI creates an opaque UUID for anonymous delegation so the stored shape remains compatible with later Person UUIDs without inventing a Person record.
+
 ## Activity Logging
 Meaningful mutations must create ActivityEvents.
 

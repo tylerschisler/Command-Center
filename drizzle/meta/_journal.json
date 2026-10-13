@@ -8,6 +8,13 @@
       "when": 1791848111871,
       "tag": "0000_milky_dark_phoenix",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791852407827,
+      "tag": "0001_daily_imperial_guard",
+      "breakpoints": true
     }
   ]
 }
