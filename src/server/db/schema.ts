@@ -22,6 +22,26 @@ export const activityEvents = sqliteTable(
 export type ActivityEvent = typeof activityEvents.$inferSelect;
 export type NewActivityEvent = typeof activityEvents.$inferInsert;
 
+export const people = sqliteTable(
+  "people",
+  {
+    id: text("id").primaryKey(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    displayName: text("display_name").notNull(),
+    companyOrTeam: text("company_or_team"),
+    role: text("role"),
+    notes: text("notes"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    archivedAt: text("archived_at"),
+  },
+  (table) => [
+    index("people_display_name_idx").on(table.displayName),
+    index("people_archived_at_idx").on(table.archivedAt),
+  ],
+);
+
 export const projects = sqliteTable(
   "projects",
   {
@@ -57,7 +77,8 @@ export const tasks = sqliteTable(
     description: text("description").notNull().default(""),
     status: text("status", { enum: ["not_started", "in_progress", "waiting", "blocked", "completed"] }).notNull(),
     priority: text("priority", { enum: ["critical", "high", "medium", "low"] }).notNull(),
-    ownerId: text("owner_id"),
+    ownerId: text("owner_id").references(() => people.id, { onDelete: "set null" }),
+    unresolvedOwnerToken: text("unresolved_owner_token"),
     projectId: text("project_id").references(() => projects.id, { onDelete: "set null" }),
     startDate: text("start_date"),
     targetDate: text("target_date"),
@@ -73,6 +94,7 @@ export const tasks = sqliteTable(
     index("tasks_project_id_idx").on(table.projectId),
     index("tasks_status_idx").on(table.status),
     index("tasks_owner_id_idx").on(table.ownerId),
+    index("tasks_unresolved_owner_token_idx").on(table.unresolvedOwnerToken),
     index("tasks_archived_at_idx").on(table.archivedAt),
     check("tasks_status_check", sql`${table.status} in ('not_started','in_progress','waiting','blocked','completed')`),
     check("tasks_priority_check", sql`${table.priority} in ('critical','high','medium','low')`),
@@ -80,7 +102,43 @@ export const tasks = sqliteTable(
   ],
 );
 
+export const requests = sqliteTable(
+  "requests",
+  {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    requestedFromPersonId: text("requested_from_person_id").notNull().references(() => people.id, { onDelete: "restrict" }),
+    status: text("status", { enum: ["draft", "requested", "acknowledged", "waiting", "received", "closed"] }).notNull(),
+    priority: text("priority", { enum: ["critical", "high", "medium", "low"] }).notNull(),
+    requestedDate: text("requested_date").notNull(),
+    dueDate: text("due_date").notNull(),
+    followUpDate: text("follow_up_date"),
+    receivedDate: text("received_date"),
+    closedDate: text("closed_date"),
+    projectId: text("project_id").references(() => projects.id, { onDelete: "set null" }),
+    relatedTaskId: text("related_task_id").references(() => tasks.id, { onDelete: "set null" }),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    archivedAt: text("archived_at"),
+  },
+  (table) => [
+    index("requests_person_id_idx").on(table.requestedFromPersonId),
+    index("requests_project_id_idx").on(table.projectId),
+    index("requests_task_id_idx").on(table.relatedTaskId),
+    index("requests_status_idx").on(table.status),
+    index("requests_due_date_idx").on(table.dueDate),
+    index("requests_archived_at_idx").on(table.archivedAt),
+    check("requests_status_check", sql`${table.status} in ('draft','requested','acknowledged','waiting','received','closed')`),
+    check("requests_priority_check", sql`${table.priority} in ('critical','high','medium','low')`),
+  ],
+);
+
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
+export type Person = typeof people.$inferSelect;
+export type NewPerson = typeof people.$inferInsert;
+export type WorkRequest = typeof requests.$inferSelect;
+export type NewWorkRequest = typeof requests.$inferInsert;

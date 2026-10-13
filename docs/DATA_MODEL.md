@@ -35,7 +35,7 @@ Relationships:
 - Knowledge Pages
 - Activity Events
 
-Phase 2 storage uses the `projects` table with UUID text IDs, constrained status/health/priority values, ISO `YYYY-MM-DD` calendar dates, ISO timestamps for created/updated/archive audit fields, and no Milestone entity. `ownerId` remains nullable and intentionally has no Person foreign key until Phase 3.
+The `projects` table uses UUID text IDs, constrained status/health/priority values, ISO `YYYY-MM-DD` calendar dates, ISO timestamps for created/updated/archive audit fields, and no Milestone entity. Project ownership remains nullable and is not expanded in Phase 3; People relationships are derived from delegated Tasks and Requests.
 
 ## Task
 Fields:
@@ -63,7 +63,7 @@ Rules:
 
 Phase 2 storage uses the `tasks` table with UUID text IDs and a nullable `projectId` foreign key. Removing a Project relationship sets `projectId` to null rather than deleting the Task. Status and priority are database-constrained. Dates are independent ISO `YYYY-MM-DD` values. `estimatedEffort` is optional non-negative minutes. `recurrenceRuleId` is reserved as a nullable UUID without recurrence behavior or a premature RecurrenceRule table.
 
-Until Phase 3 introduces People, `ownerId = null` means the current user (Mine). A non-null UUID means Delegated, but does not claim a Person record exists. The Phase 2 UI generates an opaque UUID when work is marked delegated; Phase 3 must replace or map that token when a real Person is assigned.
+Phase 3 ownership is durable: `ownerId = null` and `unresolvedOwnerToken = null` means Mine; a non-null `ownerId` is a foreign key to a real Person and means Delegated. The Phase 2 anonymous UUIDs could not be mapped safely, so migration `0002` moves each one unchanged into nullable `unresolvedOwnerToken`, clears `ownerId`, and creates no fake Person. Those Tasks are excluded from Mine and Delegated filters, visibly marked unresolved in All, and can be repaired by editing the Task and choosing either Mine or a Person. Any explicit owner edit clears the legacy token.
 
 ## Request
 Fields:
@@ -82,9 +82,14 @@ Fields:
 - relatedTaskId (optional)
 - createdAt
 - updatedAt
+- archivedAt
 
 Purpose:
 A Request is something someone else owes or is expected to provide.
+
+Phase 3 stores Requests in `requests`. `requestedFromPersonId` is a required Person foreign key; optional Project and related Task relationships use `SET NULL` semantics. Status is constrained to Draft, Requested, Acknowledged, Waiting, Received, or Closed, and priority uses the shared Critical/High/Medium/Low values. Requested and due dates are required date-only values; follow-up, received, closed, and archive dates are nullable. Marking Received sets `receivedDate`; closing sets `closedDate`; neither destroys prior dates.
+
+Derived Request states are not stored: overdue means due date is before today while status is neither Received nor Closed; follow-up needed means follow-up date is today or earlier under the same open-status rule; due soon means an open, non-overdue due date within the next seven calendar days.
 
 ## Person
 Fields:
@@ -97,6 +102,7 @@ Fields:
 - notes (optional)
 - createdAt
 - updatedAt
+- archivedAt
 
 Primary derived views:
 - open tasks
@@ -104,6 +110,8 @@ Primary derived views:
 - related projects
 - meetings
 - notes
+
+Phase 3 stores only lightweight work-contact data in `people`; no addresses, phone numbers, or last-interaction field is added. Open Task, open Request, and active related Project counts are computed through application services rather than duplicated in the Person row.
 
 ## Meeting
 Fields:

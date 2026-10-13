@@ -2,23 +2,26 @@ import { randomUUID } from "node:crypto";
 import { calendarToday, hasTargetAfterDueRisk, isOverdue } from "@/domain/work";
 import type { NewActivityEvent, NewTask, Task } from "@/server/db/schema";
 import type { ProjectRepository } from "@/server/repositories/project-repository";
+import type { PersonRepository } from "@/server/repositories/person-repository";
 import type { TaskListFilters, TaskRepository } from "@/server/repositories/task-repository";
 import { NotFoundError, ValidationError } from "./service-errors";
 import { idSchema, taskCreateSchema, taskUpdateSchema } from "./work-validation";
 
-export type TaskView = Task & { targetAfterDue: boolean; overdue: boolean };
+export type TaskView = Task & { targetAfterDue: boolean; overdue: boolean; ownerName: string | null; unresolvedOwnership: boolean };
 
 export class TaskService {
   constructor(
     private readonly repository: TaskRepository,
     private readonly projects: ProjectRepository,
     private readonly now: () => Date = () => new Date(),
+    private readonly people?: PersonRepository,
   ) {}
 
   createTask(input: unknown): TaskView {
     const parsed = taskCreateSchema.parse(input);
     if (parsed.status !== "completed" && parsed.completedDate) throw new ValidationError("A completion date requires Completed status.");
     this.assertProject(parsed.projectId);
+    this.assertPerson(parsed.ownerId);
     const { source, ...values } = parsed;
     const now = this.now();
     const timestamp = now.toISOString();
@@ -29,6 +32,7 @@ export class TaskService {
       createdAt: timestamp,
       updatedAt: timestamp,
       archivedAt: null,
+      unresolvedOwnerToken: null,
     };
     return this.toView(this.repository.create(task, this.event("TASK_CREATED", task.id, `Created task “${task.title}”.`, source, {
       projectId: task.projectId, priority: task.priority, status: task.status,
@@ -54,15 +58,18 @@ export class TaskService {
     const parsed = taskUpdateSchema.parse(input);
     const { source, ...requested } = parsed;
     if (requested.projectId !== undefined) this.assertProject(requested.projectId);
+    if (requested.ownerId !== undefined) this.assertPerson(requested.ownerId);
     const nextStatus = requested.status ?? existing.status;
     if (nextStatus !== "completed" && requested.completedDate) throw new ValidationError("A completion date requires Completed status.");
     const changes: Partial<NewTask> = { ...requested };
+    if (requested.ownerId !== undefined) changes.unresolvedOwnerToken = null;
     if (nextStatus === "completed" && existing.status !== "completed") changes.completedDate ??= this.today();
     if (nextStatus !== "completed" && existing.status === "completed" && requested.completedDate === undefined) changes.completedDate = null;
     const changedFields = Object.keys(changes).filter((key) => changes[key as keyof NewTask] !== existing[key as keyof Task]);
     if (changedFields.length === 0) return this.toView(existing);
     changes.updatedAt = this.now().toISOString();
-    const eventType = nextStatus === "completed" && existing.status !== "completed"
+    const eventType = requested.ownerId !== undefined && (requested.ownerId !== existing.ownerId || Boolean(existing.unresolvedOwnerToken)) ? "TASK_OWNER_CHANGED"
+      : nextStatus === "completed" && existing.status !== "completed"
       ? "TASK_COMPLETED"
       : existing.status === "completed" && nextStatus !== "completed" ? "TASK_REOPENED" : "TASK_UPDATED";
     const updated = this.repository.update(id, changes, this.event(eventType, id,
@@ -100,10 +107,13 @@ export class TaskService {
   private assertProject(projectId: string | null | undefined) {
     if (projectId && !this.projects.findById(projectId)) throw new ValidationError("The selected project does not exist.");
   }
+  private assertPerson(personId: string | null | undefined) {
+    if (personId && (!this.people || !this.people.findById(personId))) throw new ValidationError("The selected person does not exist.");
+  }
 
   private today() { return calendarToday(this.now()); }
   private toView(task: Task): TaskView {
-    return { ...task, targetAfterDue: hasTargetAfterDueRisk(task.targetDate, task.dueDate), overdue: isOverdue(task.dueDate, task.status, this.today()) };
+    return { ...task, ownerName: task.ownerId ? this.people?.findById(task.ownerId)?.displayName ?? null : null, unresolvedOwnership: Boolean(task.unresolvedOwnerToken), targetAfterDue: hasTargetAfterDueRisk(task.targetDate, task.dueDate), overdue: isOverdue(task.dueDate, task.status, this.today()) };
   }
   private event(eventType: string, entityId: string, description: string, source: NewActivityEvent["source"], metadata: Record<string, unknown>, timestamp: string): NewActivityEvent {
     return { id: randomUUID(), eventType, description, entityType: "task", entityId, source, metadata, timestamp };

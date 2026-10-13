@@ -40,6 +40,11 @@ button { border:0; border-radius:7px; background:var(--accent); color:white; pad
 .data-table { overflow-x:auto; background:var(--panel); border:1px solid var(--line); border-radius:10px; }
 .table-row { min-width:1020px; display:grid; grid-template-columns:minmax(180px,2fr) .7fr 1fr .7fr 1fr 1fr 1fr .8fr; align-items:center; gap:.8rem; padding:.9rem 1rem; border-top:1px solid var(--line); font-size:.86rem; }
 .table-row:first-child { border-top:0; }.table-head { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; background:#f0efe9; }
+.table-button { width:100%; border:0; border-radius:0; background:transparent; color:inherit; text-align:left; font:inherit; cursor:pointer; }
+.table-button:hover,.table-button:focus-visible { background:#f5f4ef; color:inherit; transform:none; }
+.people-table .table-row { grid-template-columns:minmax(180px,2fr) 1.5fr .7fr .8fr .8fr; min-width:760px; }
+.requests-table .table-row { grid-template-columns:1fr minmax(180px,1.7fr) 1fr .7fr 1fr 1fr 1fr .8fr; }
+.requests-table small { display:block; margin-top:.25rem; color:var(--muted); }
 .text-button { padding:0; background:transparent; color:var(--ink); font-weight:700; text-align:left; }.text-button:hover,.text-button:focus-visible { color:var(--accent); text-decoration:underline; }
 .badge { display:inline-flex; width:max-content; border-radius:999px; padding:.28rem .52rem; margin-right:.3rem; background:#eceeea; color:#48534e; font-size:.7rem; font-weight:750; white-space:nowrap; }
 .badge.critical,.badge.blocked,.badge.off_track,.badge.overdue { background:#f8dddd; color:#8a2b2b; }.badge.high,.badge.at_risk,.badge.waiting { background:#f5e7c9; color:#7b5812; }.badge.completed,.badge.on_track,.badge.active { background:var(--accent-soft); color:var(--accent); }

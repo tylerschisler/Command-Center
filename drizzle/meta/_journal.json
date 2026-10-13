@@ -15,6 +15,13 @@
       "when": 1791852407827,
       "tag": "0001_daily_imperial_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791853064822,
+      "tag": "0002_groovy_sugar_man",
+      "breakpoints": true
     }
   ]
 }

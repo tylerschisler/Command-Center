@@ -92,7 +92,11 @@ Phase 2 adds `TaskService` and `ProjectService` with `TaskRepository` and `Proje
 
 Task and Project inputs are validated with Zod and database CHECK constraints. Calendar dates use `YYYY-MM-DD` strings so target and due dates retain date-only semantics. Target-after-due and overdue states are derived without changing stored dates or Project health. Project progress is deterministic: completed non-archived tasks divided by all non-archived tasks, rounded to a whole percentage; zero tasks is shown as “No tasks” and 0%.
 
-Phase 2 ownership is transitional: null `ownerId` means the current user and non-null means delegated. No People table or foreign key is introduced before Phase 3. The UI creates an opaque UUID for anonymous delegation so the stored shape remains compatible with later Person UUIDs without inventing a Person record.
+Phase 3 adds `PersonService`/`PersonRepository` and `RequestService`/`RequestRepository` under the same boundary. Person and Request route handlers remain thin manual-source adapters, and each repository mutation writes its domain row and `ActivityEvent` in one SQLite transaction. Person detail and counts are derived through repositories; they are not denormalized. Request overdue, follow-up-needed, due-soon, and waiting-duration states are deterministic service projections.
+
+Task ownership now has three intentional storage states. Mine has no external owner (`ownerId` and `unresolvedOwnerToken` are null). Delegated has an `ownerId` foreign key to a real Person. A migrated Phase 2 anonymous delegation has no Person owner and retains the old opaque UUID in `unresolvedOwnerToken`. Migration `0002` rebuilds `tasks`, copies every old non-null `owner_id` into that token column, and sets the new Person foreign key to null. This avoids data loss, invalid foreign keys, and fabricated contacts. An explicit owner edit validates the Person and clears the unresolved token atomically; `TASK_OWNER_CHANGED` records actual ownership changes.
+
+The People and Waiting On client workspaces call only application route handlers. Project detail embeds the same filtered Waiting On view rather than querying Drizzle. Meetings and richer Notes remain explicit Phase 4+ placeholders.
 
 ## Activity Logging
 Meaningful mutations must create ActivityEvents.

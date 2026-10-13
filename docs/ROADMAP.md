@@ -109,6 +109,14 @@ Definition of Done:
 - request lifecycle works
 - follow-up needed and overdue filters work
 
+Implemented foundation:
+- encrypted versioned migration for `people`, `requests`, and safe legacy Task ownership conversion
+- Person CRUD/archive/restore with derived Task, Request, and Project relationships
+- Request CRUD, lifecycle dates, archive/restore, and atomic ActivityEvents
+- real Person ownership in My Work with an explicit unresolved-legacy repair state
+- People and Waiting On workspaces with deterministic overdue, due-soon, and follow-up views
+- functional Project Waiting On tab and Phase 4 Meetings placeholder
+
 ## Phase 4 — Calendar + Meetings
 Build:
 - Day / Week / Month / Agenda views
