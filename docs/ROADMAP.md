@@ -207,6 +207,7 @@ Definition of Done:
 - destructive actions require confirmation
 
 ## Phase 8 — Voice Jarvis
+Status: implemented in the `v0.8-voice` candidate; final browser verification remains required before checkpointing.
 Build:
 - SpeechToText provider abstraction
 - TextToSpeech provider abstraction
@@ -220,6 +221,14 @@ Definition of Done:
 - user can issue commands by voice
 - Jarvis can speak back
 - voice can create meeting notes/tasks/requests through controlled tools
+
+Implemented foundation:
+- server-only provider abstractions with OpenAI and deterministic test adapters
+- short, explicit push-to-talk capture with size/duration/content-type limits and no audio persistence
+- existing Jarvis/service/tool pipeline reused with `voice` ActivityEvent provenance
+- short spoken summaries with independent confirmation, briefing, and long-response policy
+- Meeting Mode voice context for notes, decisions, Tasks, and Requests
+- encrypted preference and metadata-only voice usage tracking with an optional monthly duration warning
 
 ## Phase 9 — GRC Intelligence + Backup + Hardening
 Build:

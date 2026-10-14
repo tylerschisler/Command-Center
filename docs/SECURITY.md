@@ -211,3 +211,13 @@ Cloud AI is disabled by default. Enabling it is an explicit local setting and do
 Jarvis sends a user prompt plus only context selected through allowlisted tools or the explicitly open Project/Knowledge record. Retrieved notes and Knowledge content are wrapped and labeled as untrusted application data and may never redefine system policy or tool permissions. Tool names and arguments are independently allowlisted and schema-validated; prompt instructions cannot create new capabilities. Structured provider output is validated and rendered without executable HTML.
 
 The OpenAI request uses `store: false`. Command Center does not persist prompts, responses, or conversational history. Encrypted `ai_usage_records` contain provider, model, timestamp, request/token counts, and an optional future cost field only. Application logs must not contain prompts, responses, API keys, database keys, recovery credentials, tool payloads, full Knowledge content, or backup material.
+
+## Phase 8 Speech Boundary
+
+Microphone access is browser-only and begins solely after an explicit pointer press or focused Space/Enter press on the push-to-talk control. Capture ends on release and is force-stopped after 30 seconds. Command Center does not request background microphone access, detect wake words, record continuously, or open a Realtime session.
+
+The browser sends audio to a local server route over multipart form data. The route accepts only WebM, MP4/M4A, MP3, WAV, or Ogg audio, rejects unexpected fields, limits the recording to 5 MB and 30 seconds, and generates its own safe provider filename. Audio remains in memory and is discarded after the request. It is never written to SQLite, application logs, temporary files, encrypted backups, or usage records. Transcripts are short-lived request/browser state and are not persisted or logged.
+
+OpenAI speech calls reuse the Phase 7 server-only API-key boundary. Speech failure logs contain only provider, model, stage, HTTP status, provider error type/code, and request ID. They exclude audio, transcripts, prompts, tool payloads, model output, and secrets. STT failure preserves typed/manual workflows; TTS failure cannot invalidate an already completed Jarvis action.
+
+Voice settings and aggregate usage metadata live inside encrypted SQLite. Usage records contain no raw audio or transcript. `OPENAI_STT_MODEL`, `OPENAI_TTS_MODEL`, and `OPENAI_TTS_VOICE` are server-only environment values without a `NEXT_PUBLIC_` prefix. Estimated speech cost remains null until reliable configurable pricing is introduced; Phase 9 may add cost cutoffs without changing this data-minimizing boundary.

@@ -325,3 +325,13 @@ The product should always provide a normal manual path for every critical workfl
 Jarvis is entered from the global `Ask Jarvis…` control or `⌘J`. The surface is a command palette that expands into a structured document workspace, never a chat transcript. Simple single mutations use an ambient confirmation, multiple successful mutations use an action summary with entity links, and analysis uses reusable heading, metric, reference, warning, recommendation, and briefing blocks. Follow-ups stay within the active browser session.
 
 When a Project or Knowledge Page is explicitly open, its typed ID and label—not page HTML—are passed as context. Ambiguity produces a clarification instead of a guessed mutation. Navigation is limited to known destinations and local validated entity IDs. Cloud AI settings clearly explain data egress and preserve all manual functionality when disabled.
+
+# Phase 8 Voice interaction
+
+The Jarvis workspace includes a Hold to talk control rather than a chat-style audio timeline. Pointer users press and release the control; keyboard users focus it and hold Space or Enter. The interface moves through Idle, Listening, Processing speech, Thinking / executing, Speaking, and Error states. `⌘J` continues to open typed Jarvis.
+
+The ephemeral transcript is shown as “Heard” so the user can understand what entered the normal Jarvis pipeline. The visual structured result remains authoritative. Short confirmations may play automatically; briefing speech is opt-in; long Workspace responses default to Ask and expose a separate Speak summary button. The application never automatically reads the full Workspace.
+
+Settings expose Voice Enabled, Speech to Text, Voice Responses, Speak Confirmations, Speak Briefings, Speak Long Responses (Ask/On/Off), automatic spoken-response length, and an optional monthly transcription warning. STT and TTS can be disabled independently. Disabled or failed voice controls always leave typed Jarvis and manual product workflows available.
+
+An in-progress Meeting shows Voice command. Opening it supplies only the explicit Meeting ID/label as Jarvis context; spoken notes, decisions, Tasks, and Requests use the same controlled tools as typed commands. Meeting Mode does not record continuously.

@@ -388,3 +388,9 @@ Activity Event:
 ## Phase 7 AI Settings and Usage
 
 `ai_settings` is a singleton local preference record containing only the Cloud AI enabled flag and update timestamp. Cloud AI defaults off. `ai_usage_records` stores one local accounting row per provider request sequence: provider, model, request timestamp, input/output token counts, request count, and nullable estimated cost in micros. It never stores prompts, responses, tool arguments, API keys, or conversation history. Both tables reside inside the existing encrypted SQLite database.
+
+## Phase 8 Voice Settings and Usage
+
+`ai_settings` now also stores local voice preferences: Voice Enabled, STT Enabled, Voice Responses, Speak Confirmations, Speak Briefings, long-response behavior, automatic speech character limit, and an optional monthly warning duration. Voice defaults off. STT and TTS remain independently controllable.
+
+`voice_usage_records` stores one metadata-only row for each successful transcription or speech request. Fields are operation kind, provider, model, timestamp, optional audio duration, optional input-character count, optional output-byte count, and nullable estimated cost in micros. It does not contain audio bytes, transcript text, spoken text, prompts, responses, or tool arguments.

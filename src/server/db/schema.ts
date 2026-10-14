@@ -313,8 +313,20 @@ export const briefings = sqliteTable(
 export const aiSettings = sqliteTable("ai_settings", {
   id: text("id").primaryKey(),
   cloudAiEnabled: integer("cloud_ai_enabled", { mode: "boolean" }).notNull().default(false),
+  voiceEnabled: integer("voice_enabled", { mode: "boolean" }).notNull().default(false),
+  sttEnabled: integer("stt_enabled", { mode: "boolean" }).notNull().default(true),
+  voiceResponsesEnabled: integer("voice_responses_enabled", { mode: "boolean" }).notNull().default(true),
+  speakConfirmations: integer("speak_confirmations", { mode: "boolean" }).notNull().default(true),
+  speakBriefings: integer("speak_briefings", { mode: "boolean" }).notNull().default(false),
+  speakLongResponses: text("speak_long_responses", { enum: ["ask", "on", "off"] }).notNull().default("ask"),
+  automaticSpeechCharacterLimit: integer("automatic_speech_character_limit").notNull().default(280),
+  monthlyVoiceWarningSeconds: integer("monthly_voice_warning_seconds"),
   updatedAt: text("updated_at").notNull(),
-});
+}, (table) => [
+  check("ai_settings_long_response_check", sql`${table.speakLongResponses} in ('ask','on','off')`),
+  check("ai_settings_speech_limit_check", sql`${table.automaticSpeechCharacterLimit} between 80 and 1000`),
+  check("ai_settings_voice_warning_check", sql`${table.monthlyVoiceWarningSeconds} is null or ${table.monthlyVoiceWarningSeconds} > 0`),
+]);
 
 export const aiUsageRecords = sqliteTable(
   "ai_usage_records",
@@ -331,6 +343,26 @@ export const aiUsageRecords = sqliteTable(
   (table) => [
     index("ai_usage_timestamp_idx").on(table.requestTimestamp),
     check("ai_usage_token_check", sql`${table.inputTokens} >= 0 and ${table.outputTokens} >= 0 and ${table.requestCount} > 0`),
+  ],
+);
+
+export const voiceUsageRecords = sqliteTable(
+  "voice_usage_records",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind", { enum: ["transcription", "speech"] }).notNull(),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    requestTimestamp: text("request_timestamp").notNull(),
+    audioDurationMs: integer("audio_duration_ms"),
+    inputCharacters: integer("input_characters"),
+    outputBytes: integer("output_bytes"),
+    estimatedCostMicros: integer("estimated_cost_micros"),
+  },
+  (table) => [
+    index("voice_usage_timestamp_idx").on(table.requestTimestamp),
+    check("voice_usage_kind_check", sql`${table.kind} in ('transcription','speech')`),
+    check("voice_usage_values_check", sql`(${table.audioDurationMs} is null or ${table.audioDurationMs} >= 0) and (${table.inputCharacters} is null or ${table.inputCharacters} >= 0) and (${table.outputBytes} is null or ${table.outputBytes} >= 0)`),
   ],
 );
 
@@ -362,3 +394,5 @@ export type NewBriefing = typeof briefings.$inferInsert;
 export type AiSettings = typeof aiSettings.$inferSelect;
 export type AiUsageRecord = typeof aiUsageRecords.$inferSelect;
 export type NewAiUsageRecord = typeof aiUsageRecords.$inferInsert;
+export type VoiceUsageRecord = typeof voiceUsageRecords.$inferSelect;
+export type NewVoiceUsageRecord = typeof voiceUsageRecords.$inferInsert;

@@ -332,3 +332,17 @@ Phase 7 introduces a provider-neutral `AiProvider` boundary with an OpenAI Respo
 The UI is a command surface and document-style Workspace, not a transcript. Provider output is a typed block schema rendered as React text and local entity links; raw HTML/Markdown and model-authored URLs are not rendered. Project and Knowledge detail views publish only explicit page context. Follow-up subject state exists only in browser memory.
 
 AI settings and aggregate usage are local encrypted records. Prompts and responses are not persisted. Deterministic Phase 6 facts remain authoritative for briefing generation; Phase 7 may present those facts but does not replace or rewrite them with model claims.
+
+## Phase 8 Voice Jarvis
+
+Phase 8 adds provider-neutral `SpeechToTextProvider` and `TextToSpeechProvider` boundaries. OpenAI implementations use the server-only Audio transcription and speech APIs; the configured model names come from `OPENAI_STT_MODEL` and `OPENAI_TTS_MODEL`, and the browser never receives the API key. The initial recommended low-cost configuration is `gpt-4o-mini-transcribe` for command transcription and `gpt-4o-mini-tts` for short spoken summaries, but application services do not depend on those identifiers.
+
+The flow remains push-to-talk → speech-to-text → the existing `JarvisService` and strict tool controller → structured visual result → optional text-to-speech. It does not use the Realtime API or keep a paid audio session open. Voice-originated mutations pass `source: voice` through the same application services and transactional ActivityEvent paths as typed Jarvis mutations.
+
+Browser audio capture begins only from the focused microphone button's pointer or keyboard press and stops on release or after 30 seconds. The local `/api/voice/command` route accepts only one supported audio file plus bounded command metadata, rejects recordings over 5 MB or 30 seconds, and keeps bytes in memory. It never writes temporary audio, SQLite audio, transcripts, or conversation history. The server returns the ephemeral transcript for visual confirmation and discards request audio after processing.
+
+TTS is a non-authoritative presentation step. `VoiceService` first completes Jarvis and commits any service mutation, then decides whether a short summary should be spoken. Confirmation, briefing, and long-response settings are enforced before synthesis. TTS/provider/playback failure leaves the structured visual result and completed action intact. Long Workspace output is never read in full automatically; Ask mode offers a separate Speak summary action.
+
+Meeting Mode publishes an explicit Meeting page context to the existing Jarvis surface. Meeting notes, decisions, Tasks, and Requests still use the allowlisted tools and existing Meeting, Task, and Request services. There is no continuous meeting capture, diarization, or full-meeting transcription.
+
+Encrypted `voice_usage_records` contain only operation kind, provider/model, timestamp, duration, character count, byte count, and an optional future cost field. Pricing is not hard-coded. The local settings table includes voice/STT/TTS switches, spoken-output policy, an automatic character limit, and an optional monthly transcription-duration warning. Automatic cost cutoffs and broader budget management remain Phase 9 hardening work.

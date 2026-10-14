@@ -11,11 +11,11 @@ export class JarvisUnavailableError extends Error {}
 
 export class JarvisService {
   constructor(private readonly provider: AiProvider | null, private readonly tools: JarvisToolController, private readonly settings: AiSettingsService) {}
-  async run(input: unknown) {
+  async run(input: unknown, source: "jarvis" | "voice" = "jarvis") {
     const parsed = requestSchema.parse(input); if (!isValidCalendarDate(parsed.today) || !isValidTimeZone(parsed.timeZone)) throw new ValidationError("Jarvis requires a valid local date and IANA time zone.");
     const status = this.settings.status(); if (!status.cloudAiEnabled) throw new JarvisUnavailableError("Jarvis is unavailable because Cloud AI is disabled. Core Command Center features remain available.");
     if (!this.provider) throw new JarvisUnavailableError("Jarvis is unavailable because the AI provider is not configured. Core Command Center features remain available.");
-    const result = await this.provider.executeToolLoop({ ...parsed, pageContext: parsed.pageContext as JarvisPageContext, priorSubject: parsed.priorSubject as JarvisPageContext, tools: this.tools.tools(), executeTool: (name, args) => this.tools.execute(name, args, { today: parsed.today, timeZone: parsed.timeZone, pageContext: parsed.pageContext as JarvisPageContext }) });
+    const result = await this.provider.executeToolLoop({ ...parsed, pageContext: parsed.pageContext as JarvisPageContext, priorSubject: parsed.priorSubject as JarvisPageContext, tools: this.tools.tools(), executeTool: (name, args) => this.tools.execute(name, args, { today: parsed.today, timeZone: parsed.timeZone, pageContext: parsed.pageContext as JarvisPageContext, source }) });
     this.settings.recordUsage(result.usage);
     const knownIds = new Set<string>(); if (parsed.pageContext) knownIds.add(parsed.pageContext.entityId); if (parsed.priorSubject) knownIds.add(parsed.priorSubject.entityId);
     const collect = (value: unknown) => { if (!value || typeof value !== "object") return; if (Array.isArray(value)) { value.forEach(collect); return; } const record = value as Record<string, unknown>; if (typeof record.id === "string") knownIds.add(record.id); Object.values(record).forEach(collect); };

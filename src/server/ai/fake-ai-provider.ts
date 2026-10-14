@@ -14,6 +14,16 @@ export class DeterministicFakeAiProvider implements AiProvider {
       const result = await call("delete_everything", {}); response = this.basic("workspace", "Action blocked", result.error ?? "That action is not permitted.", "warning");
     } else if (prompt.includes("create a task") && prompt.includes("soc report")) {
       const result = await call("create_task", { title: "Review the SOC report", dueDate: "tomorrow" }); response = this.mutationResponse(result, "Task created");
+    } else if (prompt.includes("add a note") && request.pageContext?.entityType === "meeting") {
+      const result = await call("add_meeting_note", { note: "Sarah will send the user list Friday." }); response = this.mutationResponse(result, "Meeting note added");
+    } else if (prompt.includes("add a decision") && request.pageContext?.entityType === "meeting") {
+      const result = await call("add_meeting_decision", { content: "We are moving the target date to Friday." }); response = this.mutationResponse(result, "Meeting decision added");
+    } else if (prompt.includes("create a task") && request.pageContext?.entityType === "meeting") {
+      const result = await call("create_task", { title: "Review it", dueDate: "monday" }); response = this.mutationResponse(result, "Meeting task created");
+    } else if (prompt.includes("create a request") && request.pageContext?.entityType === "meeting") {
+      const people = await call("search_people", { query: "Sarah", limit: 10 }); const person = ((people.data as Array<Record<string, unknown>> | undefined) ?? [])[0];
+      if (!person?.id) response = this.basic("workspace", "Clarification needed", "Choose the person who owes this request.", "warning");
+      else { const result = await call("create_request", { title: "Send the user list", requestedFromPersonId: person.id, requestedDate: request.today, dueDate: "tomorrow" }); response = this.mutationResponse(result, "Meeting request created"); }
     } else if (prompt.includes("add a task") && request.pageContext?.entityType === "project") {
       const result = await call("create_task", { title: "Follow up", dueDate: "tomorrow" }); response = this.mutationResponse(result, "Project task created");
     } else if (prompt.includes("waiting on") && prompt.includes("sarah")) {

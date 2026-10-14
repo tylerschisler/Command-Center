@@ -1,6 +1,6 @@
 # Command Center
 
-Local-first personal productivity and project-management software. Phase 6 provides manual Task, Project, Person, Request, Meeting, Calendar, and Knowledge workflows plus a deterministic Command Center and persisted Morning, End-of-Day, and Weekly briefings. Data remains in encrypted SQLite with versioned knowledge, local search, and durable activity history.
+Local-first personal productivity and project-management software. Phase 8 provides manual Task, Project, Person, Request, Meeting, Calendar, and Knowledge workflows, a deterministic Command Center, controlled text Jarvis, and optional push-to-talk voice. Data remains in encrypted SQLite with versioned knowledge, local search, and durable activity history.
 
 ## Local setup
 
@@ -28,6 +28,8 @@ npm run dev
 `Home` derives concise daily metrics, ranked attention, work, dependencies, meetings, project health, and Focus recommendations from persisted local data. Ranking is deterministic and displays its reasons. Morning, End-of-Day, and Weekly briefings persist both traceable structured facts and a human-readable local rendering; Phase 6 uses no AI or cloud dependency. Generation is manual, and regenerating preserves prior briefing snapshots.
 
 `Jarvis` opens with `⌘J` (or the top-bar button) as an integrated command/workspace surface. Cloud AI is off by default and can be enabled under Settings after `OPENAI_API_KEY` and `OPENAI_MODEL` are configured server-side. Jarvis uses an explicit, validated tool allowlist that calls application services; destructive, bulk, filesystem, database, backup, shell, and arbitrary-network tools are not exposed. Prompts and responses are short-lived and are not persisted. Local usage records contain provider/model, timestamps, request counts, and tokens only.
+
+Voice Jarvis uses short push-to-talk recordings, not an always-on or realtime session. Configure `OPENAI_STT_MODEL` and `OPENAI_TTS_MODEL` server-side, enable Cloud AI and Voice under Settings, then press and hold the microphone control. The initial cost-efficient choices are `gpt-4o-mini-transcribe` and `gpt-4o-mini-tts`; model selection remains environment-driven. Raw audio and transcripts are not persisted or logged. TTS is optional, summarizes the visual result, and cannot invalidate a completed action. In Meeting Mode, Voice command opens Jarvis with the selected Meeting as explicit context.
 
 ## Commands
 
