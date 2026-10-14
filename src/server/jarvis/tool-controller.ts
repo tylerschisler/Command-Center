@@ -3,6 +3,7 @@ import { addDays, weekStart } from "@/domain/command-center";
 import { MEETING_STATUSES, PRIORITIES, PROJECT_HEALTH, PROJECT_STATUSES, REQUEST_STATUSES, TASK_STATUSES } from "@/domain/work";
 import { navigationHref, resolveNaturalDate, type JarvisPageContext } from "@/domain/jarvis";
 import type { AiToolDefinition, AiToolResult, JsonSchema } from "@/server/ai/ai-provider";
+import { normalizeOptionalNullArguments, toStrictFunctionSchema } from "@/server/ai/strict-tool-schema";
 import type { createWorkServices } from "@/server/services/work-services";
 
 export type ToolRisk = "read" | "low_write" | "significant";
@@ -11,7 +12,8 @@ type ExecutionContext = { today: string; timeZone: string; pageContext: JarvisPa
 type ToolDefinition = { name: string; description: string; risk: ToolRisk; schema: z.ZodType; execute: (args: never, context: ExecutionContext) => unknown };
 const id = z.string().uuid(); const optionalDate = z.string().min(1).optional().nullable();
 const empty = z.object({}); const query = z.object({ query: z.string().max(200).default(""), limit: z.number().int().min(1).max(20).default(10) });
-function asSchema(schema: z.ZodType): JsonSchema { const value = z.toJSONSchema(schema) as JsonSchema; delete value.$schema; return value; }
+function sourceSchema(schema: z.ZodType): JsonSchema { const value = z.toJSONSchema(schema, { io: "input" }) as JsonSchema; delete value.$schema; return value; }
+function asSchema(schema: z.ZodType): JsonSchema { return toStrictFunctionSchema(sourceSchema(schema)); }
 function matches(value: string, search: string) { return value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()); }
 function failure(error: unknown): AiToolResult { return { ok: false, error: error instanceof Error ? error.message : "The tool call failed safely." }; }
 
@@ -24,7 +26,7 @@ export class JarvisToolController {
   async execute(name: string, rawArgs: unknown, context: ExecutionContext): Promise<AiToolResult> {
     const tool = this.registry.get(name); if (!tool) return { ok: false, error: `Tool “${name}” is not permitted.` };
     if (tool.risk === "significant") return { ok: false, error: "This action requires confirmation and is not exposed in Phase 7." };
-    try { const args = tool.schema.parse(rawArgs); const value = await tool.execute(args as never, context); const mutation = tool.risk === "low_write" ? this.mutationFor(name, value) : undefined; return { ok: true, data: value, mutation }; } catch (error) { return failure(error); }
+    try { const args = tool.schema.parse(normalizeOptionalNullArguments(rawArgs, sourceSchema(tool.schema))); const value = await tool.execute(args as never, context); const mutation = tool.risk === "low_write" ? this.mutationFor(name, value) : undefined; return { ok: true, data: value, mutation }; } catch (error) { return failure(error); }
   }
   private mutationFor(name: string, value: unknown) {
     const record = value as Record<string, unknown>; const entity = (record.task ?? record.project ?? record.request ?? record.meeting ?? record.page ?? record.briefing ?? record) as Record<string, unknown>;

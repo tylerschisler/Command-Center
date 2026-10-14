@@ -22,7 +22,8 @@
     "recovery:init": "node --import tsx scripts/recovery.ts init",
     "recovery:verify": "node --import tsx scripts/recovery.ts verify",
     "recovery:restore-keychain": "node --import tsx scripts/recovery.ts restore-keychain",
-    "recovery:rotate": "node --import tsx scripts/recovery.ts rotate"
+    "recovery:rotate": "node --import tsx scripts/recovery.ts rotate",
+    "jarvis:schema-audit": "node --import tsx scripts/audit-jarvis-schemas.ts"
   },
   "dependencies": {
     "@napi-rs/keyring": "^2.1.1",
