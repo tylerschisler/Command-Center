@@ -1,7 +1,7 @@
 import { asc, desc, eq } from "drizzle-orm";
 import type { DashboardSnapshot } from "@/domain/command-center";
 import type { AppDatabase } from "@/server/db/client";
-import { activityEvents, briefings, meetingDecisions, meetingParticipants, meetings, people, projects, requests, tasks, type Briefing, type NewActivityEvent, type NewBriefing } from "@/server/db/schema";
+import { activityEvents, briefings, intelligenceItems, meetingDecisions, meetingParticipants, meetings, people, projects, requests, tasks, type Briefing, type NewActivityEvent, type NewBriefing } from "@/server/db/schema";
 
 export interface CommandCenterRepository {
   snapshot(): DashboardSnapshot;
@@ -25,6 +25,7 @@ export class DrizzleCommandCenterRepository implements CommandCenterRepository {
       participants: this.database.select({ meetingId: meetingParticipants.meetingId, personId: meetingParticipants.personId }).from(meetingParticipants).all(),
       decisions: this.database.select().from(meetingDecisions).orderBy(asc(meetingDecisions.createdAt)).all(),
       activity: this.database.select().from(activityEvents).orderBy(desc(activityEvents.timestamp)).all(),
+      intelligence: this.database.select().from(intelligenceItems).orderBy(desc(intelligenceItems.relevanceScore), desc(intelligenceItems.publicationDate)).limit(20).all(),
     };
   }
 }

@@ -16,6 +16,7 @@ export interface TaskRepository {
   findById(id: string): Task | undefined;
   list(filters?: TaskListFilters): Task[];
   update(id: string, changes: Partial<NewTask>, event: NewActivityEvent): Task | undefined;
+  delete(id: string, event: NewActivityEvent): boolean;
 }
 
 export class DrizzleTaskRepository implements TaskRepository {
@@ -51,6 +52,15 @@ export class DrizzleTaskRepository implements TaskRepository {
       if (!updated) return undefined;
       transaction.insert(activityEvents).values(event).run();
       return updated;
+    });
+  }
+
+  delete(id: string, event: NewActivityEvent): boolean {
+    return this.database.transaction((transaction) => {
+      const removed = transaction.delete(tasks).where(eq(tasks.id, id)).returning({ id: tasks.id }).get();
+      if (!removed) return false;
+      transaction.insert(activityEvents).values(event).run();
+      return true;
     });
   }
 }

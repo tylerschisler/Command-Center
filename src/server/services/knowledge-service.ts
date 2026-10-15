@@ -5,7 +5,7 @@ import type { KnowledgeListFilters, KnowledgeRepository } from "@/server/reposit
 import type { MeetingRepository } from "@/server/repositories/meeting-repository";
 import type { PersonRepository } from "@/server/repositories/person-repository";
 import type { ProjectRepository } from "@/server/repositories/project-repository";
-import { NotFoundError, ValidationError } from "./service-errors";
+import { assertPermanentDeleteConfirmation, NotFoundError, ValidationError } from "./service-errors";
 import {
   idSchema,
   knowledgePageCreateSchema,
@@ -52,6 +52,13 @@ export class KnowledgeService {
 
   archivePage(id: string, source: NewActivityEvent["source"] = "manual") { return this.setArchived(id, this.now().toISOString(), "KNOWLEDGE_PAGE_ARCHIVED", source); }
   restorePage(id: string, source: NewActivityEvent["source"] = "manual") { return this.setArchived(id, null, "KNOWLEDGE_PAGE_RESTORED", source); }
+  deletePage(id: string, confirmation: unknown, source: NewActivityEvent["source"] = "manual") {
+    assertPermanentDeleteConfirmation(confirmation); idSchema.parse(id);
+    if (!this.repository.findById(id)) throw new NotFoundError("Knowledge page not found.");
+    const timestamp = this.now().toISOString();
+    if (!this.repository.delete(id, this.event("KNOWLEDGE_PAGE_DELETED", id, "Permanently deleted a knowledge page and its metadata.", source, {}, timestamp))) throw new NotFoundError("Knowledge page not found.");
+    return { deleted: true, id };
+  }
 
   restoreVersion(pageId: string, input: unknown) {
     const page = this.requirePage(pageId); const parsed = knowledgeVersionRestoreSchema.parse(input); const previous = this.repository.findVersionById(parsed.versionId);

@@ -7,6 +7,9 @@ import { DrizzleRequestRepository } from "@/server/repositories/request-reposito
 import { DrizzleMeetingRepository } from "@/server/repositories/meeting-repository";
 import { DrizzleKnowledgeRepository } from "@/server/repositories/knowledge-repository";
 import { DrizzleBriefingRepository, DrizzleCommandCenterRepository } from "@/server/repositories/command-center-repository";
+import { DrizzleIntelligenceRepository } from "@/server/repositories/intelligence-repository";
+import { configuredIntelligenceSources, DeterministicFakeIntelligenceProvider, PublicFeedIntelligenceProvider } from "@/server/intelligence/intelligence-provider";
+import { getEnvironment } from "@/config/env";
 import { ProjectService } from "./project-service";
 import { TaskService } from "./task-service";
 import { PersonService } from "./person-service";
@@ -16,6 +19,7 @@ import { CalendarService } from "./calendar-service";
 import { KnowledgeService } from "./knowledge-service";
 import { BriefingService, CommandCenterService } from "./briefing-service";
 import { ActivityService } from "./activity-service";
+import { IntelligenceService } from "./intelligence-service";
 
 export function createWorkServices(database: AppDatabase = getDatabase()) {
   const activityRepository = new DrizzleActivityEventRepository(database);
@@ -27,8 +31,10 @@ export function createWorkServices(database: AppDatabase = getDatabase()) {
   const knowledgeRepository = new DrizzleKnowledgeRepository(database);
   const commandCenterRepository = new DrizzleCommandCenterRepository(database);
   const briefingRepository = new DrizzleBriefingRepository(database);
+  const intelligenceRepository = new DrizzleIntelligenceRepository(database);
   const taskService = new TaskService(taskRepository, projectRepository, undefined, personRepository, meetingRepository);
   const requestService = new RequestService(requestRepository, personRepository, projectRepository, taskRepository, activityRepository, undefined, meetingRepository);
+  const knowledgeService = new KnowledgeService(knowledgeRepository, projectRepository, personRepository, meetingRepository, activityRepository);
   return {
     tasks: taskService,
     projects: new ProjectService(projectRepository, taskRepository, activityRepository),
@@ -36,7 +42,8 @@ export function createWorkServices(database: AppDatabase = getDatabase()) {
     requests: requestService,
     meetings: new MeetingService(meetingRepository, personRepository, projectRepository, taskRepository, requestRepository, taskService, requestService, activityRepository),
     calendar: new CalendarService(meetingRepository, taskRepository, projectRepository, requestRepository),
-    knowledge: new KnowledgeService(knowledgeRepository, projectRepository, personRepository, meetingRepository, activityRepository),
+    knowledge: knowledgeService,
+    intelligence: new IntelligenceService(intelligenceRepository, getEnvironment().COMMAND_CENTER_FAKE_AI && process.env.NODE_ENV !== "production" ? new DeterministicFakeIntelligenceProvider() : new PublicFeedIntelligenceProvider(configuredIntelligenceSources(getEnvironment().INTELLIGENCE_SOURCES_JSON)), knowledgeService),
     commandCenter: new CommandCenterService(commandCenterRepository),
     briefings: new BriefingService(commandCenterRepository, briefingRepository),
     activity: new ActivityService(activityRepository),

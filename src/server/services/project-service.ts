@@ -4,7 +4,7 @@ import type { NewActivityEvent, NewProject, Project } from "@/server/db/schema";
 import type { ActivityEventRepository } from "@/server/repositories/activity-event-repository";
 import type { ProjectListFilters, ProjectRepository } from "@/server/repositories/project-repository";
 import type { TaskRepository } from "@/server/repositories/task-repository";
-import { NotFoundError, ValidationError } from "./service-errors";
+import { assertPermanentDeleteConfirmation, NotFoundError, ValidationError } from "./service-errors";
 import { idSchema, projectCreateSchema, projectUpdateSchema } from "./work-validation";
 
 export interface ProjectView extends Project {
@@ -82,6 +82,14 @@ export class ProjectService {
   completeProject(id: string, source: NewActivityEvent["source"] = "manual") { return this.updateProject(id, { status: "completed", source }); }
   archiveProject(id: string, source: NewActivityEvent["source"] = "manual") { return this.setArchive(id, this.now().toISOString(), "PROJECT_ARCHIVED", source); }
   restoreProject(id: string, source: NewActivityEvent["source"] = "manual") { return this.setArchive(id, null, "PROJECT_RESTORED", source); }
+  deleteProject(id: string, confirmation: unknown, source: NewActivityEvent["source"] = "manual") {
+    assertPermanentDeleteConfirmation(confirmation); idSchema.parse(id);
+    if (!this.repository.findById(id)) throw new NotFoundError("Project not found.");
+    const timestamp = this.now().toISOString();
+    const impact = this.repository.delete(id, this.event("PROJECT_DELETED", id, "Permanently deleted a project and cleared its relationships.", source, {}, timestamp));
+    if (!impact) throw new NotFoundError("Project not found.");
+    return { deleted: true, id, impact };
+  }
 
   private setArchive(id: string, archivedAt: string | null, eventType: string, source: NewActivityEvent["source"]): ProjectView {
     idSchema.parse(id);

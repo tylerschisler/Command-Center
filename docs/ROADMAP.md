@@ -53,7 +53,7 @@ Definition of Done:
 - backup authentication and database integrity are verified
 - known records survive a complete backup/restore test
 - the active database is preserved before restore
-- automatic scheduling, retention, secondary destinations, management UI, and disaster-recovery hardening remain deferred to Phase 9
+- automatic scheduling, retention, secondary destinations, management UI, and disaster-recovery hardening are delivered in Phase 9
 
 ## Phase 1.6 — Portable Recovery Credential
 Build:
@@ -231,6 +231,7 @@ Implemented foundation:
 - encrypted preference and metadata-only voice usage tracking with an optional monthly duration warning
 
 ## Phase 9 — GRC Intelligence + Backup + Hardening
+Status: implemented in the `v1.0` candidate; release verification required before checkpointing.
 Build:
 - Intelligence retrieval
 - source persistence
@@ -253,6 +254,12 @@ Definition of Done:
 - encrypted local storage is production-ready
 - V1 security checklist passes
 
+Implemented foundation:
+- reviewed configurable public RSS/Atom source provider, safe URL/text handling, deterministic ranking, persisted deduplication, executive Intelligence UI, Save to Knowledge, and Home/Morning Briefing integration
+- startup overdue checks, validated manual/automatic `CCBACKUP1` creation, optional encrypted secondary folder, 14/8/12 tier retention, managed cleanup, migration restore points, and guarded restore UI with rollback
+- versioned local price estimates, Unknown handling, usage dashboard, warning/cutoff controls, and a documented non-automatic model-routing hook
+- secret scanning, network/prompt-injection/logging review, production dependency audit, and expanded unit/integration/E2E regression coverage
+
 ## Planned Git Checkpoints
 - v0.1-foundation
 - v0.2-tasks-projects
@@ -263,6 +270,16 @@ Definition of Done:
 - v0.7-jarvis
 - v0.8-voice
 - v1.0
+- v1.1-usability-polish
+
+## V1.1 — Usability, reliability, deletion, and visual polish
+Status: implemented; release verification pending.
+
+- reliable Home navigation and isolated E2E server lifecycle
+- normalized Jarvis/Voice settings with typed-command fallback
+- confirmed transactional deletion for Tasks, Requests, Meetings, Projects, People, and Knowledge Pages
+- shared dark command-center design tokens, navigation, menus, dialogs, focus states, and responsive treatment
+- no schema migration and no post-V1 feature expansion
 
 ## Out of Scope for V1
 - enterprise multi-user support

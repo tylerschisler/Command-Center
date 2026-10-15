@@ -15,6 +15,9 @@ export async function PATCH(request: Request) {
       speakLongResponses: z.enum(["ask", "on", "off"]).optional(),
       automaticSpeechCharacterLimit: z.number().int().min(80).max(1_000).optional(),
       monthlyVoiceWarningSeconds: z.number().int().positive().nullable().optional(),
+      monthlyCostWarningMicros: z.number().int().positive().nullable().optional(),
+      monthlyCostCutoffMicros: z.number().int().positive().nullable().optional(),
+      hardCostCutoffEnabled: z.boolean().optional(),
     }).refine((value) => Object.keys(value).length > 0, "At least one setting is required.").parse(await readJson(request));
     const runtime = createJarvisRuntime();
     if (body.cloudAiEnabled !== undefined) runtime.settings.setCloudAiEnabled(body.cloudAiEnabled);

@@ -346,3 +346,11 @@ An Inbox concept may hold uncategorized captured items until processed.
 - mobile app
 - team permissions
 - cloud-hosted primary database
+
+## Phase 9 V1 completion
+
+The Intelligence workspace retrieves a small ranked set from reviewed public feeds, preserves source provenance, deduplicates refreshes, and lets the user explicitly save summaries and notes to Knowledge. It is not a general browser or an autonomous feed.
+
+Encrypted backups are due daily based on elapsed time and checked after startup, with manual creation, validation, typed-confirmation restore, optional encrypted folder copy, and 14 daily / 8 weekly / 12 monthly retention. Backup failures never disable normal local work.
+
+Settings presents local AI/voice usage and versioned cost estimates. Optional warning and hard-cutoff controls affect cloud AI and speech only. Manual work and deterministic briefings always remain available.

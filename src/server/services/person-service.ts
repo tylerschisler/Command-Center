@@ -6,7 +6,7 @@ import type { ProjectRepository } from "@/server/repositories/project-repository
 import type { RequestRepository } from "@/server/repositories/request-repository";
 import type { TaskRepository } from "@/server/repositories/task-repository";
 import type { MeetingRepository } from "@/server/repositories/meeting-repository";
-import { NotFoundError } from "./service-errors";
+import { assertPermanentDeleteConfirmation, NotFoundError, ValidationError } from "./service-errors";
 import { idSchema, personCreateSchema, personUpdateSchema } from "./work-validation";
 
 export interface PersonSummary extends Person { openTaskCount: number; openRequestCount: number; activeProjectCount: number }
@@ -64,6 +64,16 @@ export class PersonService {
   }
   archivePerson(id: string, source: NewActivityEvent["source"] = "manual") { return this.setArchive(id, this.now().toISOString(), "PERSON_ARCHIVED", source); }
   restorePerson(id: string, source: NewActivityEvent["source"] = "manual") { return this.setArchive(id, null, "PERSON_RESTORED", source); }
+  deletePerson(id: string, confirmation: unknown, source: NewActivityEvent["source"] = "manual") {
+    assertPermanentDeleteConfirmation(confirmation); idSchema.parse(id);
+    if (!this.repository.findById(id)) throw new NotFoundError("Person not found.");
+    const assignedTasks = this.tasks.list({ personId: id }).length + this.tasks.list({ personId: id, archived: true }).length;
+    const assignedRequests = this.requests.list({ personId: id }).length + this.requests.list({ personId: id, archived: true }).length;
+    if (assignedTasks || assignedRequests) throw new ValidationError(`Reassign ${assignedTasks} task(s) and ${assignedRequests} request(s) before deleting this person.`);
+    const timestamp = this.now().toISOString();
+    if (!this.repository.delete(id, this.event("PERSON_DELETED", id, "Permanently deleted a person.", source, {}, timestamp))) throw new NotFoundError("Person not found.");
+    return { deleted: true, id };
+  }
   private setArchive(id: string, archivedAt: string | null, type: string, source: NewActivityEvent["source"]) {
     idSchema.parse(id); const existing = this.repository.findById(id); if (!existing) throw new NotFoundError("Person not found.");
     if (existing.archivedAt === archivedAt || (archivedAt && existing.archivedAt)) return this.toSummary(existing);

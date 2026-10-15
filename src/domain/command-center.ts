@@ -1,4 +1,4 @@
-import type { ActivityEvent, Meeting, MeetingDecision, Person, Project, Task, WorkRequest } from "@/server/db/schema";
+import type { ActivityEvent, IntelligenceItem, Meeting, MeetingDecision, Person, Project, Task, WorkRequest } from "@/server/db/schema";
 import { calculateProjectProgress, hasTargetAfterDueRisk, isFollowUpNeeded, isOverdue, isRequestOverdue } from "./work";
 
 export const BRIEFING_TYPES = ["morning", "end_of_day", "weekly", "custom"] as const;
@@ -13,6 +13,7 @@ export interface DashboardSnapshot {
   participants: Array<{ meetingId: string; personId: string }>;
   decisions: MeetingDecision[];
   activity: ActivityEvent[];
+  intelligence?: IntelligenceItem[];
 }
 
 export interface DashboardContext { today: string; timeZone: string }
@@ -108,6 +109,7 @@ export function buildCommandCenter(snapshot: DashboardSnapshot, context: Dashboa
     return score(b) - score(a) || a.dueDate.localeCompare(b.dueDate);
   }).slice(0, 6).map(requestView);
   const projectHealth = snapshot.projects.filter(activeProject).map(projectView).filter((project) => project.health !== "on_track" || hasTargetAfterDueRisk(project.targetDate, project.dueDate) || dueSoon(project.dueDate, today, 14)).sort((a, b) => ({ off_track: 0, at_risk: 1, on_track: 2 })[a.health] - ({ off_track: 0, at_risk: 1, on_track: 2 })[b.health] || (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999")).slice(0, 6);
+  const intelligence = (snapshot.intelligence ?? []).filter((item) => item.publicationDate.slice(0, 10) >= addDays(today, -30) && item.relevanceScore >= 40).sort((a, b) => b.relevanceScore - a.relevanceScore || b.publicationDate.localeCompare(a.publicationDate)).slice(0, 3);
   return {
     date: today,
     timeZone,
@@ -118,6 +120,7 @@ export function buildCommandCenter(snapshot: DashboardSnapshot, context: Dashboa
     meetings: todayMeetings.sort((a, b) => a.startDateTime.localeCompare(b.startDateTime)).map(meetingView),
     projectHealth,
     focus: attention.slice(0, 5),
+    intelligence,
   };
 }
 

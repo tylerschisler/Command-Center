@@ -77,4 +77,15 @@ describe("encrypted database backup and restore", () => {
       .toMatchObject({ title: "Backup task", projectId: project.id });
     reopened.$client.close();
   });
+
+  it("rolls the protected active database back when post-activation verification fails", () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "command-center-rollback-")); tempDirectories.push(directory);
+    const databasePath = path.join(directory, "command-center.db"); const keyProvider = new StaticDatabaseKeyProvider(Buffer.alloc(32, 17));
+    const database = createDatabase(databasePath, keyProvider); migrate(database, { migrationsFolder: path.resolve("drizzle") }); database.$client.close();
+    const baseline = new BackupService({ databasePath, backupDirectory: path.join(directory, "backups"), keyProvider }); const backup = baseline.createManualBackup();
+    const changed = createDatabase(databasePath, keyProvider); new ActivityService(new DrizzleActivityEventRepository(changed)).record({ eventType: "ROLLBACK_MARKER", description: "Current state must survive failed restore.", entityType: "system", entityId: "rollback-marker", source: "system", metadata: {} }); changed.$client.close();
+    const failing = new BackupService({ databasePath, backupDirectory: path.join(directory, "backups"), keyProvider, verifyActivatedDatabase: () => { throw new Error("simulated post-activation failure"); } });
+    expect(() => failing.restoreBackup(backup.backupPath)).toThrow("simulated post-activation failure");
+    const reopened = createDatabase(databasePath, keyProvider); expect(new ActivityService(new DrizzleActivityEventRepository(reopened)).forEntity("system", "rollback-marker")).toHaveLength(1); reopened.$client.close();
+  });
 });

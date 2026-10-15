@@ -394,3 +394,11 @@ Activity Event:
 `ai_settings` now also stores local voice preferences: Voice Enabled, STT Enabled, Voice Responses, Speak Confirmations, Speak Briefings, long-response behavior, automatic speech character limit, and an optional monthly warning duration. Voice defaults off. STT and TTS remain independently controllable.
 
 `voice_usage_records` stores one metadata-only row for each successful transcription or speech request. Fields are operation kind, provider, model, timestamp, optional audio duration, optional input-character count, optional output-byte count, and nullable estimated cost in micros. It does not contain audio bytes, transcript text, spoken text, prompts, responses, or tool arguments.
+
+## Phase 9 Intelligence, Backup, and Cost Data
+
+`intelligence_items` persists sanitized structured text only: headline, normalized headline, source name, safe original/canonical URL, publication/fetch timestamps, summary, deterministic relevance score, explanation, JSON topics, and an optional saved Knowledge Page relationship. Canonical URL is unique; normalized headline plus publication day provides a second service-level duplicate check. Full article bodies and raw HTML are never stored.
+
+`backup_settings` is a singleton with automatic-backup enablement and an optional secondary local folder. `backup_records` contains managed archive metadata and status: backup ID, timestamps, trigger, filename/path, validation state, optional secondary-copy state, schema version, encrypted database byte count, and a bounded safe error code. It never contains encryption keys or recovery credentials.
+
+`ai_settings` adds monthly warning/cutoff amounts in integer USD micros plus an explicit hard-cutoff switch. Existing AI and voice usage rows populate `estimatedCostMicros` only when the versioned pricing configuration recognizes the model. Unknown pricing remains null.

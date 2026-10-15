@@ -26,6 +26,7 @@ export class VoiceService {
     this.validateAudio(input);
     const status = this.settings.status();
     if (!status.cloudAiEnabled) throw new VoiceUnavailableError("Voice Jarvis is unavailable because Cloud AI is disabled. Typed and manual workflows remain available.");
+    if (status.budget.hardCutoffReached) throw new VoiceUnavailableError("Voice Jarvis is unavailable because the optional monthly AI budget cutoff was reached. Manual workflows remain available.");
     if (!status.voice.enabled) throw new VoiceUnavailableError("Voice input is disabled in Settings. Typed Jarvis remains available.");
     if (!status.voice.sttEnabled) throw new VoiceUnavailableError("Speech to text is disabled in Settings. Typed Jarvis remains available.");
     if (!this.speechToText) throw new VoiceUnavailableError("Speech to text is not configured. Typed Jarvis remains available.");

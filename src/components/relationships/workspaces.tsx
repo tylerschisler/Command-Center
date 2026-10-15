@@ -1,80 +1,1014 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { calendarToday, labels, PRIORITIES, REQUEST_STATUSES } from "@/domain/work";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
+import {
+  calendarToday,
+  labels,
+  PRIORITIES,
+  REQUEST_STATUSES,
+} from "@/domain/work";
 import { KnowledgeRelationsPanel } from "@/components/knowledge/knowledge-workspace";
+import { EntityActions } from "@/components/ui/entity-actions";
 
-type Person = { id: string; firstName: string; lastName: string; displayName: string; companyOrTeam: string | null; role: string | null; notes: string | null; archivedAt: string | null; openTaskCount: number; openRequestCount: number; activeProjectCount: number };
-type Task = { id: string; title: string; status: string; projectId: string | null; ownerName: string | null; unresolvedOwnership: boolean };
+type Person = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  companyOrTeam: string | null;
+  role: string | null;
+  notes: string | null;
+  archivedAt: string | null;
+  openTaskCount: number;
+  openRequestCount: number;
+  activeProjectCount: number;
+};
+type Task = {
+  id: string;
+  title: string;
+  status: string;
+  projectId: string | null;
+  ownerName: string | null;
+  unresolvedOwnership: boolean;
+};
 type Project = { id: string; name: string; status: string };
 type Activity = { id: string; description: string; timestamp: string };
-type MeetingItem = { id: string; title: string; startDateTime: string; endDateTime: string; status: string; projectId: string | null };
-type RequestItem = { id: string; title: string; description: string; requestedFromPersonId: string; personName: string; status: (typeof REQUEST_STATUSES)[number]; priority: (typeof PRIORITIES)[number]; requestedDate: string; dueDate: string; followUpDate: string | null; receivedDate: string | null; closedDate: string | null; projectId: string | null; projectName: string | null; relatedTaskId: string | null; relatedTaskTitle: string | null; overdue: boolean; followUpNeeded: boolean; dueSoon: boolean; waitingDays: number };
-type PersonDetail = Person & { tasks: Task[]; requests: RequestItem[]; projects: Project[]; meetings: MeetingItem[]; activity: Activity[] };
+type MeetingItem = {
+  id: string;
+  title: string;
+  startDateTime: string;
+  endDateTime: string;
+  status: string;
+  projectId: string | null;
+};
+type RequestItem = {
+  id: string;
+  title: string;
+  description: string;
+  requestedFromPersonId: string;
+  personName: string;
+  status: (typeof REQUEST_STATUSES)[number];
+  priority: (typeof PRIORITIES)[number];
+  requestedDate: string;
+  dueDate: string;
+  followUpDate: string | null;
+  receivedDate: string | null;
+  closedDate: string | null;
+  projectId: string | null;
+  projectName: string | null;
+  relatedTaskId: string | null;
+  relatedTaskTitle: string | null;
+  overdue: boolean;
+  followUpNeeded: boolean;
+  dueSoon: boolean;
+  waitingDays: number;
+};
+type PersonDetail = Person & {
+  tasks: Task[];
+  requests: RequestItem[];
+  projects: Project[];
+  meetings: MeetingItem[];
+  activity: Activity[];
+};
 type RequestDetail = RequestItem & { activity: Activity[] };
 
 async function api<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...options, headers: { "content-type": "application/json", ...options?.headers } });
-  const body = await response.json() as T & { error?: string }; if (!response.ok) throw new Error(body.error ?? "The request failed."); return body;
+  const response = await fetch(url, {
+    ...options,
+    headers: { "content-type": "application/json", ...options?.headers },
+  });
+  const body = (await response.json()) as T & { error?: string };
+  if (!response.ok) throw new Error(body.error ?? "The request failed.");
+  return body;
 }
-function dateText(value: string | null) { return value ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`)) : "—"; }
-function Badge({ value }: { value: string }) { return <span className={`badge ${value}`}>{labels[value as keyof typeof labels] ?? value}</span>; }
-function RequestRisk({ item }: { item: RequestItem }) { return <>{item.overdue && <div className="risk" role="status">Request is overdue.</div>}{item.followUpNeeded && <div className="risk" role="status">Follow-up is needed.</div>}</>; }
+function dateText(value: string | null) {
+  return value
+    ? new Intl.DateTimeFormat(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+      }).format(new Date(`${value}T00:00:00Z`))
+    : "—";
+}
+function Badge({ value }: { value: string }) {
+  return (
+    <span className={`badge ${value}`}>
+      {labels[value as keyof typeof labels] ?? value}
+    </span>
+  );
+}
+function RequestRisk({ item }: { item: RequestItem }) {
+  return (
+    <>
+      {item.overdue && (
+        <div className="risk" role="status">
+          Request is overdue.
+        </div>
+      )}
+      {item.followUpNeeded && (
+        <div className="risk" role="status">
+          Follow-up is needed.
+        </div>
+      )}
+    </>
+  );
+}
 
-function PersonForm({ person, onSaved, onCancel }: { person?: Person; onSaved: (id?: string) => void; onCancel: () => void }) {
-  const [error, setError] = useState(""); const [saving, setSaving] = useState(false);
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setSaving(true); setError(""); const form = new FormData(event.currentTarget);
-    const payload = { firstName: form.get("firstName"), lastName: form.get("lastName"), displayName: String(form.get("displayName") || "") || undefined, companyOrTeam: String(form.get("companyOrTeam") || "") || null, role: String(form.get("role") || "") || null, notes: String(form.get("notes") || "") || null };
-    try { const result = await api<{ person: Person }>(person ? `/api/people/${person.id}` : "/api/people", { method: person ? "PATCH" : "POST", body: JSON.stringify(payload) }); onSaved(result.person.id); } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to save person."); } finally { setSaving(false); }
+function PersonForm({
+  person,
+  onSaved,
+  onCancel,
+}: {
+  person?: Person;
+  onSaved: (id?: string) => void;
+  onCancel: () => void;
+}) {
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    const form = new FormData(event.currentTarget);
+    const payload = {
+      firstName: form.get("firstName"),
+      lastName: form.get("lastName"),
+      displayName: String(form.get("displayName") || "") || undefined,
+      companyOrTeam: String(form.get("companyOrTeam") || "") || null,
+      role: String(form.get("role") || "") || null,
+      notes: String(form.get("notes") || "") || null,
+    };
+    try {
+      const result = await api<{ person: Person }>(
+        person ? `/api/people/${person.id}` : "/api/people",
+        { method: person ? "PATCH" : "POST", body: JSON.stringify(payload) },
+      );
+      onSaved(result.person.id);
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Unable to save person.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
-  return <form className="editor-form" onSubmit={submit}><div className="editor-heading"><div><span className="eyebrow">Person</span><h2>{person ? "Edit person" : "New person"}</h2></div><button type="button" className="button-secondary" onClick={onCancel}>Close</button></div>{error && <p className="form-error" role="alert">{error}</p>}<div className="form-grid"><label>First name<input name="firstName" defaultValue={person?.firstName} required autoFocus /></label><label>Last name<input name="lastName" defaultValue={person?.lastName} required /></label><label>Display name<input name="displayName" defaultValue={person?.displayName} placeholder="Defaults to full name" /></label><label>Role<input name="role" defaultValue={person?.role ?? ""} /></label><label>Company or team<input name="companyOrTeam" defaultValue={person?.companyOrTeam ?? ""} /></label></div><label>Notes<textarea name="notes" rows={5} maxLength={10000} defaultValue={person?.notes ?? ""} /></label><button disabled={saving}>{saving ? "Saving…" : "Save person"}</button></form>;
+  return (
+    <form className="editor-form" onSubmit={submit}>
+      <div className="editor-heading">
+        <div>
+          <span className="eyebrow">Person</span>
+          <h2>{person ? "Edit person" : "New person"}</h2>
+        </div>
+        <button type="button" className="button-secondary" onClick={onCancel}>
+          Close
+        </button>
+      </div>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="form-grid">
+        <label>
+          First name
+          <input
+            name="firstName"
+            defaultValue={person?.firstName}
+            required
+            autoFocus
+          />
+        </label>
+        <label>
+          Last name
+          <input name="lastName" defaultValue={person?.lastName} required />
+        </label>
+        <label>
+          Display name
+          <input
+            name="displayName"
+            defaultValue={person?.displayName}
+            placeholder="Defaults to full name"
+          />
+        </label>
+        <label>
+          Role
+          <input name="role" defaultValue={person?.role ?? ""} />
+        </label>
+        <label>
+          Company or team
+          <input
+            name="companyOrTeam"
+            defaultValue={person?.companyOrTeam ?? ""}
+          />
+        </label>
+      </div>
+      <label>
+        Notes
+        <textarea
+          name="notes"
+          rows={5}
+          maxLength={10000}
+          defaultValue={person?.notes ?? ""}
+        />
+      </label>
+      <button disabled={saving}>{saving ? "Saving…" : "Save person"}</button>
+    </form>
+  );
 }
 
-function RequestForm({ item, people, projects, tasks, projectId, onSaved, onCancel }: { item?: RequestItem; people: Person[]; projects: Project[]; tasks: Task[]; projectId?: string; onSaved: () => void; onCancel: () => void }) {
-  const [error, setError] = useState(""); const [saving, setSaving] = useState(false);
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setSaving(true); setError(""); const form = new FormData(event.currentTarget);
-    const payload = { title: form.get("title"), description: form.get("description"), requestedFromPersonId: form.get("requestedFromPersonId"), status: form.get("status"), priority: form.get("priority"), requestedDate: form.get("requestedDate"), dueDate: form.get("dueDate"), followUpDate: String(form.get("followUpDate") || "") || null, projectId: String(form.get("projectId") || "") || null, relatedTaskId: String(form.get("relatedTaskId") || "") || null };
-    try { await api(item ? `/api/requests/${item.id}` : "/api/requests", { method: item ? "PATCH" : "POST", body: JSON.stringify(payload) }); onSaved(); } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to save request."); } finally { setSaving(false); }
+function RequestForm({
+  item,
+  people,
+  projects,
+  tasks,
+  projectId,
+  onSaved,
+  onCancel,
+}: {
+  item?: RequestItem;
+  people: Person[];
+  projects: Project[];
+  tasks: Task[];
+  projectId?: string;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    const form = new FormData(event.currentTarget);
+    const payload = {
+      title: form.get("title"),
+      description: form.get("description"),
+      requestedFromPersonId: form.get("requestedFromPersonId"),
+      status: form.get("status"),
+      priority: form.get("priority"),
+      requestedDate: form.get("requestedDate"),
+      dueDate: form.get("dueDate"),
+      followUpDate: String(form.get("followUpDate") || "") || null,
+      projectId: String(form.get("projectId") || "") || null,
+      relatedTaskId: String(form.get("relatedTaskId") || "") || null,
+    };
+    try {
+      await api(item ? `/api/requests/${item.id}` : "/api/requests", {
+        method: item ? "PATCH" : "POST",
+        body: JSON.stringify(payload),
+      });
+      onSaved();
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Unable to save request.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
-  return <form className="editor-form" onSubmit={submit}><div className="editor-heading"><div><span className="eyebrow">Waiting on</span><h2>{item ? "Edit request" : "New request"}</h2></div><button type="button" className="button-secondary" onClick={onCancel}>Close</button></div>{error && <p className="form-error" role="alert">{error}</p>}<label>Request<input name="title" defaultValue={item?.title} required autoFocus /></label><label>Description<textarea name="description" defaultValue={item?.description} rows={3} /></label><div className="form-grid"><label>Requested from<select name="requestedFromPersonId" defaultValue={item?.requestedFromPersonId} required><option value="">Choose a person</option>{people.map((person) => <option key={person.id} value={person.id}>{person.displayName}</option>)}</select></label><label>Status<select name="status" defaultValue={item?.status ?? "requested"}>{REQUEST_STATUSES.map((status) => <option key={status} value={status}>{labels[status]}</option>)}</select></label><label>Priority<select name="priority" defaultValue={item?.priority ?? "medium"}>{PRIORITIES.map((priority) => <option key={priority} value={priority}>{labels[priority]}</option>)}</select></label><label>Requested date<input name="requestedDate" type="date" required defaultValue={item?.requestedDate ?? calendarToday()} /></label><label>Due date<input name="dueDate" type="date" required defaultValue={item?.dueDate ?? ""} /></label><label>Follow-up date<input name="followUpDate" type="date" defaultValue={item?.followUpDate ?? ""} /></label><label>Project<select name="projectId" defaultValue={item?.projectId ?? projectId ?? ""}><option value="">No project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label><label>Related task<select name="relatedTaskId" defaultValue={item?.relatedTaskId ?? ""}><option value="">No related task</option>{tasks.map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}</select></label></div><button disabled={saving}>{saving ? "Saving…" : "Save request"}</button></form>;
+  return (
+    <form className="editor-form" onSubmit={submit}>
+      <div className="editor-heading">
+        <div>
+          <span className="eyebrow">Waiting on</span>
+          <h2>{item ? "Edit request" : "New request"}</h2>
+        </div>
+        <button type="button" className="button-secondary" onClick={onCancel}>
+          Close
+        </button>
+      </div>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      <label>
+        Request
+        <input name="title" defaultValue={item?.title} required autoFocus />
+      </label>
+      <label>
+        Description
+        <textarea
+          name="description"
+          defaultValue={item?.description}
+          rows={3}
+        />
+      </label>
+      <div className="form-grid">
+        <label>
+          Requested from
+          <select
+            name="requestedFromPersonId"
+            defaultValue={item?.requestedFromPersonId}
+            required
+          >
+            <option value="">Choose a person</option>
+            {people.map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.displayName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Status
+          <select name="status" defaultValue={item?.status ?? "requested"}>
+            {REQUEST_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {labels[status]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Priority
+          <select name="priority" defaultValue={item?.priority ?? "medium"}>
+            {PRIORITIES.map((priority) => (
+              <option key={priority} value={priority}>
+                {labels[priority]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Requested date
+          <input
+            name="requestedDate"
+            type="date"
+            required
+            defaultValue={item?.requestedDate ?? calendarToday()}
+          />
+        </label>
+        <label>
+          Due date
+          <input
+            name="dueDate"
+            type="date"
+            required
+            defaultValue={item?.dueDate ?? ""}
+          />
+        </label>
+        <label>
+          Follow-up date
+          <input
+            name="followUpDate"
+            type="date"
+            defaultValue={item?.followUpDate ?? ""}
+          />
+        </label>
+        <label>
+          Project
+          <select
+            name="projectId"
+            defaultValue={item?.projectId ?? projectId ?? ""}
+          >
+            <option value="">No project</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Related task
+          <select name="relatedTaskId" defaultValue={item?.relatedTaskId ?? ""}>
+            <option value="">No related task</option>
+            {tasks.map((task) => (
+              <option key={task.id} value={task.id}>
+                {task.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <button disabled={saving}>{saving ? "Saving…" : "Save request"}</button>
+    </form>
+  );
 }
 
-function ActivePeopleWorkspace({ refresh, onChanged }: { refresh: number; onChanged: () => void }) {
-  const [people, setPeople] = useState<Person[]>([]); const [detail, setDetail] = useState<PersonDetail | null>(null); const [editing, setEditing] = useState<Person | "new" | null>(null); const [error, setError] = useState(""); const [loading, setLoading] = useState(true);
-  const load = useCallback(async () => { try { const data = await api<{ people: Person[] }>("/api/people"); setPeople(data.people); setLoading(false); } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to load people."); setLoading(false); } }, []);
-  const select = useCallback(async (id: string) => { try { setDetail((await api<{ person: PersonDetail }>(`/api/people/${id}`)).person); } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to load person."); } }, []);
-  useEffect(() => { void api<{ people: Person[] }>("/api/people").then((data) => { setPeople(data.people); setLoading(false); }).catch((caught: unknown) => { setError(caught instanceof Error ? caught.message : "Unable to load people."); setLoading(false); }); }, [refresh]);
-  async function archive(person: Person) { await api(`/api/people/${person.id}`, { method: "PATCH", body: JSON.stringify({ action: "archive" }) }); setDetail(null); await load(); onChanged(); }
-  return <div className="page work-page"><div className="page-header"><div><div className="eyebrow">Relationships</div><h1>People</h1><p className="lede">The people connected to delegated work and outstanding requests.</p></div><button onClick={() => setEditing("new")}>Create person</button></div>{error && <p className="form-error" role="alert">{error}</p>}{loading && <p className="empty-state" role="status">Loading people…</p>}{!loading && people.length === 0 && <div className="empty-state"><h2>No people yet</h2><p>Add a person before delegating work or recording a request.</p></div>}{people.length > 0 && <div className="data-table people-table" role="table" aria-label="People"><div className="table-row table-head"><span>Name</span><span>Role / team</span><span>Open tasks</span><span>Open requests</span><span>Active projects</span></div>{people.map((person) => <button className="table-row table-button" key={person.id} onClick={() => void select(person.id)}><strong>{person.displayName}</strong><span>{[person.role, person.companyOrTeam].filter(Boolean).join(" · ") || "—"}</span><span>{person.openTaskCount}</span><span>{person.openRequestCount}</span><span>{person.activeProjectCount}</span></button>)}</div>}
-    {detail && <section className="project-detail"><div className="detail-title"><div><span className="eyebrow">Person detail</span><h2>{detail.displayName}</h2><p>{[detail.role, detail.companyOrTeam].filter(Boolean).join(" · ")}</p></div><div className="section-actions"><button className="button-secondary" onClick={() => setEditing(detail)}>Edit</button><button className="button-secondary" onClick={() => void archive(detail)}>Archive</button></div></div><div className="overview-grid"><div><span>Open tasks</span><strong>{detail.openTaskCount}</strong></div><div><span>Open requests</span><strong>{detail.openRequestCount}</strong></div><div><span>Active projects</span><strong>{detail.activeProjectCount}</strong></div></div><h3>Tasks</h3>{detail.tasks.length ? <ul className="detail-list">{detail.tasks.map((task) => <li key={task.id}><strong>{task.title}</strong><Badge value={task.status} /></li>)}</ul> : <p className="empty-state">No delegated tasks.</p>}<h3>Waiting On</h3>{detail.requests.length ? <ul className="detail-list">{detail.requests.map((item) => <li key={item.id}><div><strong>{item.title}</strong><RequestRisk item={item} /></div><Badge value={item.status} /></li>)}</ul> : <p className="empty-state">No requests from this person.</p>}<h3>Projects</h3>{detail.projects.length ? <ul className="detail-list">{detail.projects.map((project) => <li key={project.id}><strong>{project.name}</strong><Badge value={project.status} /></li>)}</ul> : <p className="empty-state">No related projects.</p>}<h3>Notes</h3><p className="empty-state">{detail.notes || "No notes recorded."}</p></section>}
-    {detail && <section className="project-detail" aria-label={`${detail.displayName} meetings`}><h2>Meeting schedule</h2>{detail.meetings.length ? <ul className="detail-list">{detail.meetings.map((meeting) => <li key={meeting.id}><div><strong>{meeting.title}</strong><time>{new Date(meeting.startDateTime).toLocaleString()}</time></div><Badge value={meeting.status} /></li>)}</ul> : <p className="empty-state">No meetings with this person.</p>}<KnowledgeRelationsPanel targetType="person" targetId={detail.id} title="Person knowledge" /></section>}
-    {editing && <aside className="editor-panel" aria-label="Person editor"><PersonForm person={editing === "new" ? undefined : editing} onCancel={() => setEditing(null)} onSaved={(id) => { setEditing(null); void load(); if (id) void select(id); }} /></aside>}
-  </div>;
+function ActivePeopleWorkspace({
+  refresh,
+  onChanged,
+}: {
+  refresh: number;
+  onChanged: () => void;
+}) {
+  const [people, setPeople] = useState<Person[]>([]);
+  const [detail, setDetail] = useState<PersonDetail | null>(null);
+  const [editing, setEditing] = useState<Person | "new" | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const load = useCallback(async () => {
+    try {
+      const data = await api<{ people: Person[] }>("/api/people");
+      setPeople(data.people);
+      setLoading(false);
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Unable to load people.",
+      );
+      setLoading(false);
+    }
+  }, []);
+  const select = useCallback(async (id: string) => {
+    try {
+      setDetail(
+        (await api<{ person: PersonDetail }>(`/api/people/${id}`)).person,
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Unable to load person.",
+      );
+    }
+  }, []);
+  useEffect(() => {
+    void api<{ people: Person[] }>("/api/people")
+      .then((data) => {
+        setPeople(data.people);
+        setLoading(false);
+      })
+      .catch((caught: unknown) => {
+        setError(
+          caught instanceof Error ? caught.message : "Unable to load people.",
+        );
+        setLoading(false);
+      });
+  }, [refresh]);
+  async function archive(person: Person) {
+    await api(`/api/people/${person.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ action: "archive" }),
+    });
+    setDetail(null);
+    await load();
+    onChanged();
+  }
+  async function remove(person: PersonDetail, confirmation: string) {
+    await api(`/api/people/${person.id}`, {
+      method: "DELETE",
+      body: JSON.stringify({ confirmation }),
+    });
+    setDetail(null);
+    await load();
+    onChanged();
+  }
+  return (
+    <div className="page work-page">
+      <div className="page-header">
+        <div>
+          <div className="eyebrow">Relationships</div>
+          <h1>People</h1>
+          <p className="lede">
+            The people connected to delegated work and outstanding requests.
+          </p>
+        </div>
+        <button onClick={() => setEditing("new")}>Create person</button>
+      </div>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      {loading && (
+        <p className="empty-state" role="status">
+          Loading people…
+        </p>
+      )}
+      {!loading && people.length === 0 && (
+        <div className="empty-state">
+          <h2>No people yet</h2>
+          <p>Add a person before delegating work or recording a request.</p>
+        </div>
+      )}
+      {people.length > 0 && (
+        <div
+          className="data-table people-table"
+          role="table"
+          aria-label="People"
+        >
+          <div className="table-row table-head">
+            <span>Name</span>
+            <span>Role / team</span>
+            <span>Open tasks</span>
+            <span>Open requests</span>
+            <span>Active projects</span>
+          </div>
+          {people.map((person) => (
+            <button
+              className="table-row table-button"
+              key={person.id}
+              onClick={() => void select(person.id)}
+            >
+              <strong>{person.displayName}</strong>
+              <span>
+                {[person.role, person.companyOrTeam]
+                  .filter(Boolean)
+                  .join(" · ") || "—"}
+              </span>
+              <span>{person.openTaskCount}</span>
+              <span>{person.openRequestCount}</span>
+              <span>{person.activeProjectCount}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {detail && (
+        <section className="project-detail">
+          <div className="detail-title">
+            <div>
+              <span className="eyebrow">Person detail</span>
+              <h2>{detail.displayName}</h2>
+              <p>
+                {[detail.role, detail.companyOrTeam]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            </div>
+            <EntityActions
+              label={detail.displayName}
+              impact={[
+                `${detail.openTaskCount} active task(s)`,
+                `${detail.openRequestCount} active request(s)`,
+                "Deletion is blocked until all task and request assignments are reassigned",
+              ]}
+              onEdit={() => setEditing(detail)}
+              onArchive={() => archive(detail)}
+              onDelete={(confirmation) => remove(detail, confirmation)}
+            />
+          </div>
+          <div className="overview-grid">
+            <div>
+              <span>Open tasks</span>
+              <strong>{detail.openTaskCount}</strong>
+            </div>
+            <div>
+              <span>Open requests</span>
+              <strong>{detail.openRequestCount}</strong>
+            </div>
+            <div>
+              <span>Active projects</span>
+              <strong>{detail.activeProjectCount}</strong>
+            </div>
+          </div>
+          <h3>Tasks</h3>
+          {detail.tasks.length ? (
+            <ul className="detail-list">
+              {detail.tasks.map((task) => (
+                <li key={task.id}>
+                  <strong>{task.title}</strong>
+                  <Badge value={task.status} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="empty-state">No delegated tasks.</p>
+          )}
+          <h3>Waiting On</h3>
+          {detail.requests.length ? (
+            <ul className="detail-list">
+              {detail.requests.map((item) => (
+                <li key={item.id}>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <RequestRisk item={item} />
+                  </div>
+                  <Badge value={item.status} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="empty-state">No requests from this person.</p>
+          )}
+          <h3>Projects</h3>
+          {detail.projects.length ? (
+            <ul className="detail-list">
+              {detail.projects.map((project) => (
+                <li key={project.id}>
+                  <strong>{project.name}</strong>
+                  <Badge value={project.status} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="empty-state">No related projects.</p>
+          )}
+          <h3>Notes</h3>
+          <p className="empty-state">{detail.notes || "No notes recorded."}</p>
+        </section>
+      )}
+      {detail && (
+        <section
+          className="project-detail"
+          aria-label={`${detail.displayName} meetings`}
+        >
+          <h2>Meeting schedule</h2>
+          {detail.meetings.length ? (
+            <ul className="detail-list">
+              {detail.meetings.map((meeting) => (
+                <li key={meeting.id}>
+                  <div>
+                    <strong>{meeting.title}</strong>
+                    <time>
+                      {new Date(meeting.startDateTime).toLocaleString()}
+                    </time>
+                  </div>
+                  <Badge value={meeting.status} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="empty-state">No meetings with this person.</p>
+          )}
+          <KnowledgeRelationsPanel
+            targetType="person"
+            targetId={detail.id}
+            title="Person knowledge"
+          />
+        </section>
+      )}
+      {editing && (
+        <aside className="editor-panel" aria-label="Person editor">
+          <PersonForm
+            person={editing === "new" ? undefined : editing}
+            onCancel={() => setEditing(null)}
+            onSaved={(id) => {
+              setEditing(null);
+              void load();
+              if (id) void select(id);
+            }}
+          />
+        </aside>
+      )}
+    </div>
+  );
 }
 
-function ArchivedPeople({ refresh, onChanged }: { refresh: number; onChanged: () => void }) {
+function ArchivedPeople({
+  refresh,
+  onChanged,
+}: {
+  refresh: number;
+  onChanged: () => void;
+}) {
   const [people, setPeople] = useState<Person[]>([]);
   const [error, setError] = useState("");
-  useEffect(() => { void api<{ people: Person[] }>("/api/people?archived=true").then((data) => setPeople(data.people)).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : "Unable to load archived people.")); }, [refresh]);
-  async function restore(person: Person) { try { await api(`/api/people/${person.id}`, { method: "PATCH", body: JSON.stringify({ action: "restore" }) }); setPeople((current) => current.filter((item) => item.id !== person.id)); onChanged(); } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to restore person."); } }
+  useEffect(() => {
+    void api<{ people: Person[] }>("/api/people?archived=true")
+      .then((data) => setPeople(data.people))
+      .catch((caught: unknown) =>
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "Unable to load archived people.",
+        ),
+      );
+  }, [refresh]);
+  async function restore(person: Person) {
+    try {
+      await api(`/api/people/${person.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ action: "restore" }),
+      });
+      setPeople((current) => current.filter((item) => item.id !== person.id));
+      onChanged();
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Unable to restore person.",
+      );
+    }
+  }
   if (!people.length && !error) return null;
-  return <section className="project-detail" aria-label="Archived people"><h2>Archived people</h2>{error && <p className="form-error" role="alert">{error}</p>}<ul className="detail-list">{people.map((person) => <li key={person.id}><strong>{person.displayName}</strong><button className="button-secondary compact" onClick={() => void restore(person)}>Restore</button></li>)}</ul></section>;
+  return (
+    <section className="project-detail" aria-label="Archived people">
+      <h2>Archived people</h2>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      <ul className="detail-list">
+        {people.map((person) => (
+          <li key={person.id}>
+            <strong>{person.displayName}</strong>
+            <button
+              className="button-secondary compact"
+              onClick={() => void restore(person)}
+            >
+              Restore
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 export function PeopleWorkspace() {
   const [refresh, setRefresh] = useState(0);
-  return <><ActivePeopleWorkspace refresh={refresh} onChanged={() => setRefresh((value) => value + 1)} /><div className="page work-page archived-people"><ArchivedPeople refresh={refresh} onChanged={() => setRefresh((value) => value + 1)} /></div></>;
+  return (
+    <>
+      <ActivePeopleWorkspace
+        refresh={refresh}
+        onChanged={() => setRefresh((value) => value + 1)}
+      />
+      <div className="page work-page archived-people">
+        <ArchivedPeople
+          refresh={refresh}
+          onChanged={() => setRefresh((value) => value + 1)}
+        />
+      </div>
+    </>
+  );
 }
 
 export function WaitingOnWorkspace({ projectId }: { projectId?: string } = {}) {
-  const [requests, setRequests] = useState<RequestItem[]>([]); const [people, setPeople] = useState<Person[]>([]); const [projects, setProjects] = useState<Project[]>([]); const [tasks, setTasks] = useState<Task[]>([]); const [filter, setFilter] = useState("all"); const [detail, setDetail] = useState<RequestDetail | null>(null); const [editing, setEditing] = useState<RequestItem | "new" | null>(null); const [error, setError] = useState(""); const [loading, setLoading] = useState(true);
-  const load = useCallback(async () => { try { const suffix = projectId ? `?projectId=${projectId}` : ""; const [r, p, pr, t] = await Promise.all([api<{ requests: RequestItem[] }>(`/api/requests${suffix}`), api<{ people: Person[] }>("/api/people"), api<{ projects: Project[] }>("/api/projects"), api<{ tasks: Task[] }>("/api/tasks")]); setRequests(r.requests); setPeople(p.people); setProjects(pr.projects); setTasks(t.tasks); setLoading(false); } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to load requests."); setLoading(false); } }, [projectId]);
-  useEffect(() => { const suffix = projectId ? `?projectId=${projectId}` : ""; void Promise.all([api<{ requests: RequestItem[] }>(`/api/requests${suffix}`), api<{ people: Person[] }>("/api/people"), api<{ projects: Project[] }>("/api/projects"), api<{ tasks: Task[] }>("/api/tasks")]).then(([r, p, pr, t]) => { setRequests(r.requests); setPeople(p.people); setProjects(pr.projects); setTasks(t.tasks); setLoading(false); }).catch((caught: unknown) => { setError(caught instanceof Error ? caught.message : "Unable to load requests."); setLoading(false); }); }, [projectId]);
-  const shown = useMemo(() => requests.filter((item) => filter === "all" || (filter === "overdue" && item.overdue) || (filter === "due-soon" && item.dueSoon) || (filter === "follow-up" && item.followUpNeeded) || (filter === "received" && item.status === "received")), [filter, requests]);
-  async function open(id: string) { setDetail((await api<{ request: RequestDetail }>(`/api/requests/${id}`)).request); }
-  async function markReceived(item: RequestItem) { try { await api(`/api/requests/${item.id}`, { method: "PATCH", body: JSON.stringify({ action: "received" }) }); setDetail(null); await load(); } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to update request."); } }
-  return <div className={projectId ? "" : "page work-page"}>{!projectId && <div className="page-header"><div><div className="eyebrow">Follow-through</div><h1>Waiting On</h1><p className="lede">Track what others owe, when it is due, and when to follow up.</p></div><button disabled={!people.length} onClick={() => setEditing("new")}>Create request</button></div>}<div className="filter-tabs" role="tablist" aria-label="Request views">{[["all","All"],["overdue","Overdue"],["due-soon","Due Soon"],["follow-up","Follow-Up Needed"],["received","Received"]].map(([value,label]) => <button role="tab" aria-selected={filter===value} className={filter===value?"active":""} key={value} onClick={() => setFilter(value)}>{label}</button>)}</div>{error && <p className="form-error" role="alert">{error}</p>}{loading && <p className="empty-state" role="status">Loading requests…</p>}{!loading && shown.length === 0 && <div className="empty-state"><h2>No requests here</h2><p>{people.length ? "Create a request or choose another view." : "Add a person before creating a request."}</p></div>}{shown.length > 0 && <div className="data-table requests-table" role="table" aria-label="Requests"><div className="table-row table-head"><span>Person</span><span>Request</span><span>Project</span><span>Priority</span><span>Requested</span><span>Due</span><span>Follow-up</span><span>Status</span></div>{shown.map((item) => <button className="table-row table-button" key={item.id} onClick={() => void open(item.id)}><span>{item.personName}</span><div><strong>{item.title}</strong><small>{item.waitingDays} day{item.waitingDays === 1 ? "" : "s"} waiting</small><RequestRisk item={item} /></div><span>{item.projectName ?? "—"}</span><Badge value={item.priority} /><span>{dateText(item.requestedDate)}</span><span>{dateText(item.dueDate)}</span><span>{dateText(item.followUpDate)}</span><Badge value={item.status} /></button>)}</div>}
-    {detail && <section className="project-detail"><div className="detail-title"><div><span className="eyebrow">Request detail</span><h2>{detail.title}</h2><p>Requested from {detail.personName}</p></div><div className="section-actions"><button className="button-secondary" onClick={() => setEditing(detail)}>Edit</button>{detail.status !== "received" && detail.status !== "closed" && <button onClick={() => void markReceived(detail)}>Mark received</button>}</div></div><RequestRisk item={detail} /><div className="overview-grid"><div><span>Status</span><Badge value={detail.status} /></div><div><span>Project</span><strong>{detail.projectName ?? "—"}</strong></div><div><span>Related task</span><strong>{detail.relatedTaskTitle ?? "—"}</strong></div><div><span>Requested</span><strong>{dateText(detail.requestedDate)}</strong></div><div><span>Due</span><strong>{dateText(detail.dueDate)}</strong></div><div><span>Follow-up</span><strong>{dateText(detail.followUpDate)}</strong></div></div><p>{detail.description || "No description."}</p><h3>Activity</h3>{detail.activity.length ? <ul className="activity-list">{detail.activity.map((activity) => <li key={activity.id}><strong>{activity.description}</strong><time>{new Date(activity.timestamp).toLocaleString()}</time></li>)}</ul> : <p className="empty-state">No activity recorded.</p>}</section>}
-    {editing && <aside className="editor-panel" aria-label="Request editor"><RequestForm item={editing === "new" ? undefined : editing} people={people} projects={projects} tasks={tasks} projectId={projectId} onCancel={() => setEditing(null)} onSaved={() => { setEditing(null); setDetail(null); void load(); }} /></aside>}
-  </div>;
+  const [requests, setRequests] = useState<RequestItem[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [filter, setFilter] = useState("all");
+  const [detail, setDetail] = useState<RequestDetail | null>(null);
+  const [editing, setEditing] = useState<RequestItem | "new" | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const load = useCallback(async () => {
+    try {
+      const suffix = projectId ? `?projectId=${projectId}` : "";
+      const [r, p, pr, t] = await Promise.all([
+        api<{ requests: RequestItem[] }>(`/api/requests${suffix}`),
+        api<{ people: Person[] }>("/api/people"),
+        api<{ projects: Project[] }>("/api/projects"),
+        api<{ tasks: Task[] }>("/api/tasks"),
+      ]);
+      setRequests(r.requests);
+      setPeople(p.people);
+      setProjects(pr.projects);
+      setTasks(t.tasks);
+      setLoading(false);
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Unable to load requests.",
+      );
+      setLoading(false);
+    }
+  }, [projectId]);
+  useEffect(() => {
+    const suffix = projectId ? `?projectId=${projectId}` : "";
+    void Promise.all([
+      api<{ requests: RequestItem[] }>(`/api/requests${suffix}`),
+      api<{ people: Person[] }>("/api/people"),
+      api<{ projects: Project[] }>("/api/projects"),
+      api<{ tasks: Task[] }>("/api/tasks"),
+    ])
+      .then(([r, p, pr, t]) => {
+        setRequests(r.requests);
+        setPeople(p.people);
+        setProjects(pr.projects);
+        setTasks(t.tasks);
+        setLoading(false);
+      })
+      .catch((caught: unknown) => {
+        setError(
+          caught instanceof Error ? caught.message : "Unable to load requests.",
+        );
+        setLoading(false);
+      });
+  }, [projectId]);
+  const shown = useMemo(
+    () =>
+      requests.filter(
+        (item) =>
+          filter === "all" ||
+          (filter === "overdue" && item.overdue) ||
+          (filter === "due-soon" && item.dueSoon) ||
+          (filter === "follow-up" && item.followUpNeeded) ||
+          (filter === "received" && item.status === "received"),
+      ),
+    [filter, requests],
+  );
+  async function open(id: string) {
+    setDetail(
+      (await api<{ request: RequestDetail }>(`/api/requests/${id}`)).request,
+    );
+  }
+  async function markReceived(item: RequestItem) {
+    try {
+      await api(`/api/requests/${item.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ action: "received" }),
+      });
+      setDetail(null);
+      await load();
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Unable to update request.",
+      );
+    }
+  }
+  async function archiveRequest(item: RequestItem) {
+    await api(`/api/requests/${item.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ action: "archive" }),
+    });
+    setDetail(null);
+    await load();
+  }
+  async function deleteRequest(item: RequestItem, confirmation: string) {
+    await api(`/api/requests/${item.id}`, {
+      method: "DELETE",
+      body: JSON.stringify({ confirmation }),
+    });
+    setDetail(null);
+    await load();
+  }
+  return (
+    <div className={projectId ? "" : "page work-page"}>
+      {!projectId && (
+        <div className="page-header">
+          <div>
+            <div className="eyebrow">Follow-through</div>
+            <h1>Waiting On</h1>
+            <p className="lede">
+              Track what others owe, when it is due, and when to follow up.
+            </p>
+          </div>
+          <button disabled={!people.length} onClick={() => setEditing("new")}>
+            Create request
+          </button>
+        </div>
+      )}
+      <div className="filter-tabs" role="tablist" aria-label="Request views">
+        {[
+          ["all", "All"],
+          ["overdue", "Overdue"],
+          ["due-soon", "Due Soon"],
+          ["follow-up", "Follow-Up Needed"],
+          ["received", "Received"],
+        ].map(([value, label]) => (
+          <button
+            role="tab"
+            aria-selected={filter === value}
+            className={filter === value ? "active" : ""}
+            key={value}
+            onClick={() => setFilter(value)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      {loading && (
+        <p className="empty-state" role="status">
+          Loading requests…
+        </p>
+      )}
+      {!loading && shown.length === 0 && (
+        <div className="empty-state">
+          <h2>No requests here</h2>
+          <p>
+            {people.length
+              ? "Create a request or choose another view."
+              : "Add a person before creating a request."}
+          </p>
+        </div>
+      )}
+      {shown.length > 0 && (
+        <div
+          className="data-table requests-table"
+          role="table"
+          aria-label="Requests"
+        >
+          <div className="table-row table-head">
+            <span>Person</span>
+            <span>Request</span>
+            <span>Project</span>
+            <span>Priority</span>
+            <span>Requested</span>
+            <span>Due</span>
+            <span>Follow-up</span>
+            <span>Status</span>
+          </div>
+          {shown.map((item) => (
+            <button
+              className="table-row table-button"
+              key={item.id}
+              onClick={() => void open(item.id)}
+            >
+              <span>{item.personName}</span>
+              <div>
+                <strong>{item.title}</strong>
+                <small>
+                  {item.waitingDays} day{item.waitingDays === 1 ? "" : "s"}{" "}
+                  waiting
+                </small>
+                <RequestRisk item={item} />
+              </div>
+              <span>{item.projectName ?? "—"}</span>
+              <Badge value={item.priority} />
+              <span>{dateText(item.requestedDate)}</span>
+              <span>{dateText(item.dueDate)}</span>
+              <span>{dateText(item.followUpDate)}</span>
+              <Badge value={item.status} />
+            </button>
+          ))}
+        </div>
+      )}
+      {detail && (
+        <section className="project-detail">
+          <div className="detail-title">
+            <div>
+              <span className="eyebrow">Request detail</span>
+              <h2>{detail.title}</h2>
+              <p>Requested from {detail.personName}</p>
+            </div>
+            <div className="section-actions">
+              {detail.status !== "received" && detail.status !== "closed" && (
+                <button onClick={() => void markReceived(detail)}>
+                  Mark received
+                </button>
+              )}
+              <EntityActions
+                label={detail.title}
+                onEdit={() => setEditing(detail)}
+                onArchive={() => archiveRequest(detail)}
+                onDelete={(confirmation) =>
+                  deleteRequest(detail, confirmation)
+                }
+              />
+            </div>
+          </div>
+          <RequestRisk item={detail} />
+          <div className="overview-grid">
+            <div>
+              <span>Status</span>
+              <Badge value={detail.status} />
+            </div>
+            <div>
+              <span>Project</span>
+              <strong>{detail.projectName ?? "—"}</strong>
+            </div>
+            <div>
+              <span>Related task</span>
+              <strong>{detail.relatedTaskTitle ?? "—"}</strong>
+            </div>
+            <div>
+              <span>Requested</span>
+              <strong>{dateText(detail.requestedDate)}</strong>
+            </div>
+            <div>
+              <span>Due</span>
+              <strong>{dateText(detail.dueDate)}</strong>
+            </div>
+            <div>
+              <span>Follow-up</span>
+              <strong>{dateText(detail.followUpDate)}</strong>
+            </div>
+          </div>
+          <p>{detail.description || "No description."}</p>
+          <h3>Activity</h3>
+          {detail.activity.length ? (
+            <ul className="activity-list">
+              {detail.activity.map((activity) => (
+                <li key={activity.id}>
+                  <strong>{activity.description}</strong>
+                  <time>{new Date(activity.timestamp).toLocaleString()}</time>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="empty-state">No activity recorded.</p>
+          )}
+        </section>
+      )}
+      {editing && (
+        <aside className="editor-panel" aria-label="Request editor">
+          <RequestForm
+            item={editing === "new" ? undefined : editing}
+            people={people}
+            projects={projects}
+            tasks={tasks}
+            projectId={projectId}
+            onCancel={() => setEditing(null)}
+            onSaved={() => {
+              setEditing(null);
+              setDetail(null);
+              void load();
+            }}
+          />
+        </aside>
+      )}
+    </div>
+  );
 }

@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BackupSettings } from "@/components/backups/backup-settings";
 
 type VoiceStatus = {
   enabled: boolean; sttEnabled: boolean; voiceResponsesEnabled: boolean; speakConfirmations: boolean; speakBriefings: boolean;
   speakLongResponses: "ask" | "on" | "off"; automaticSpeechCharacterLimit: number; monthlyVoiceWarningSeconds: number | null;
   sttModel: string | null; ttsModel: string | null; sttConfigured: boolean; ttsConfigured: boolean; monthlyWarningReached: boolean;
-  usage: { transcriptionRequests: number; speechRequests: number; transcriptionDurationMs: number; speechCharacters: number };
+  usage: { transcriptionRequests: number; speechRequests: number; transcriptionDurationMs: number; speechCharacters: number; estimatedCostMicros: number; unknownCostRecords: number };
 };
-type Status = { cloudAiEnabled: boolean; provider: string; model: string | null; apiKeyConfigured: boolean; available: boolean; voice: VoiceStatus; usage: { requests: number; inputTokens: number; outputTokens: number } };
+type Status = { cloudAiEnabled: boolean; provider: string; model: string | null; apiKeyConfigured: boolean; available: boolean; voice: VoiceStatus; usage: { requests: number; inputTokens: number; outputTokens: number; estimatedCostMicros: number; unknownCostRecords: number }; budget: { pricingVersion: string; estimatedAiCostMicros: number; estimatedVoiceCostMicros: number; estimatedTotalMicros: number; unknownCostRecords: number; warningMicros: number | null; cutoffMicros: number | null; hardCutoffEnabled: boolean; warningReached: boolean; hardCutoffReached: boolean } };
 
 export function AiSettingsWorkspace() {
   const [status, setStatus] = useState<Status | null>(null), [error, setError] = useState("");
@@ -39,5 +40,13 @@ export function AiSettingsWorkspace() {
       <dl><div><dt>STT model</dt><dd>{status.voice.sttModel ?? "Not configured"}</dd></div><div><dt>TTS model</dt><dd>{status.voice.ttsModel ?? "Not configured"}</dd></div><div><dt>Transcription this month</dt><dd>{(status.voice.usage.transcriptionDurationMs / 60_000).toFixed(1)} min · {status.voice.usage.transcriptionRequests} requests</dd></div><div><dt>Speech this month</dt><dd>{status.voice.usage.speechRequests} requests · {status.voice.usage.speechCharacters} characters</dd></div></dl>
       <p className="field-help">Raw audio and transcripts are not stored in SQLite, backups, or usage records. Focus the Hold to talk button and hold Space or Enter for keyboard push-to-talk.</p>
     </section>
-  </>}</div>;
+    <section className="settings-card"><h2>AI Usage</h2><p>Costs are local estimates based on pricing configuration version {status.budget.pricingVersion}. Unknown model pricing remains Unknown and is never reported as zero cost.</p>
+      {status.budget.warningReached && <p className="form-warning" role="status">The monthly AI usage warning threshold has been reached.</p>}{status.budget.hardCutoffReached && <p className="form-warning" role="alert">The optional cutoff is active. Jarvis, STT, and TTS are paused; local features and deterministic briefings remain available.</p>}
+      <dl><div><dt>Jarvis requests</dt><dd>{status.usage.requests}</dd></div><div><dt>Input / output tokens</dt><dd>{status.usage.inputTokens.toLocaleString()} / {status.usage.outputTokens.toLocaleString()}</dd></div><div><dt>Estimated AI cost</dt><dd>{status.usage.unknownCostRecords ? "Unknown" : `$${(status.budget.estimatedAiCostMicros / 1_000_000).toFixed(4)}`}</dd></div><div><dt>Estimated voice cost</dt><dd>{status.voice.usage.unknownCostRecords ? "Unknown" : `$${(status.budget.estimatedVoiceCostMicros / 1_000_000).toFixed(4)}`}</dd></div><div><dt>Estimated monthly total</dt><dd>{status.budget.unknownCostRecords ? `$${(status.budget.estimatedTotalMicros / 1_000_000).toFixed(4)} + unknown-priced usage` : `$${(status.budget.estimatedTotalMicros / 1_000_000).toFixed(4)}`}</dd></div></dl>
+      <div className="settings-fields"><label>Monthly warning (USD)<input aria-label="Monthly AI Cost Warning" type="number" min="0.01" step="0.01" defaultValue={status.budget.warningMicros ? status.budget.warningMicros / 1_000_000 : ""} placeholder="Off" onBlur={(event) => void update({ monthlyCostWarningMicros: event.target.value ? Math.round(Number(event.target.value) * 1_000_000) : null })} /></label><label>Monthly cutoff (USD)<input aria-label="Monthly AI Cost Cutoff" type="number" min="0.01" step="0.01" defaultValue={status.budget.cutoffMicros ? status.budget.cutoffMicros / 1_000_000 : ""} placeholder="Off" onBlur={(event) => void update({ monthlyCostCutoffMicros: event.target.value ? Math.round(Number(event.target.value) * 1_000_000) : null })} /></label></div>
+      <label className="settings-toggle"><input type="checkbox" aria-label="Hard AI Cost Cutoff" checked={status.budget.hardCutoffEnabled} onChange={(event) => { setStatus({ ...status, budget: { ...status.budget, hardCutoffEnabled: event.target.checked } }); void update({ hardCostCutoffEnabled: event.target.checked }); }} /><span><strong>Pause optional AI at cutoff</strong><small>Only Jarvis, STT, and TTS pause. Manual Tasks, Projects, Requests, Meetings, Knowledge, backups, and deterministic briefings continue.</small></span></label>
+    </section>
+  </>}
+  <BackupSettings />
+  </div>;
 }

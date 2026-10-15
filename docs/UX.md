@@ -335,3 +335,17 @@ The ephemeral transcript is shown as “Heard” so the user can understand what
 Settings expose Voice Enabled, Speech to Text, Voice Responses, Speak Confirmations, Speak Briefings, Speak Long Responses (Ask/On/Off), automatic spoken-response length, and an optional monthly transcription warning. STT and TTS can be disabled independently. Disabled or failed voice controls always leave typed Jarvis and manual product workflows available.
 
 An in-progress Meeting shows Voice command. Opening it supplies only the explicit Meeting ID/label as Jarvis context; spoken notes, decisions, Tasks, and Requests use the same controlled tools as typed commands. Meeting Mode does not record continuously.
+
+# Phase 9 V1 operations experience
+
+Intelligence is an executive brief: the first three relevant recent items receive visual emphasis, while Topic, Freshness, and Relevance filters reduce the view. Every card shows original-source attribution/date/link, bounded summary, deterministic Why it matters, topics, and an explicit Save to Knowledge action. Empty state never invents stories.
+
+Settings adds Encrypted Backups and AI Usage. Backup state shows due/last/next status, primary and optional secondary folders, the 14/8/12 policy, manual creation, validation, and recent history. Restore is nested behind disclosure, explanation, and typed `RESTORE` confirmation. No key or recovery credential appears.
+
+AI Usage distinguishes requests, tokens, STT minutes, TTS characters, known estimates, and unknown-priced usage. Warning and cutoff amounts are editable in USD, but values are stored as integer micros. Cutoff messaging explicitly directs the user to still-available manual workflows.
+
+# V1.1 visual and destructive-action system
+
+The application uses one dark command-center token system: `#080B10` background, `#0F141C` primary surface, `#151B24` elevation, `#263241` border, `#3B82F6` primary blue, `#22D3EE` restrained accent, and accessible semantic success/warning/danger colors. Sidebar active state combines color, a left indicator, and `aria-current`; cards, tables, forms, drawers, Meeting Mode, Knowledge, Intelligence, and the Jarvis workspace share the same surfaces, focus rings, spacing, and status treatment.
+
+Permanent deletion lives in a three-dot action menu and never replaces the normal primary action. The modal is an `alertdialog`, moves focus to the confirmation field, traps Tab/Shift+Tab, closes with Escape, requires typing `DELETE`, and distinguishes danger visually without relying on color alone. Project, Person, Meeting, and Knowledge confirmations explain relationship impact. Narrow layouts collapse grids while preserving keyboard access and readable contrast; reduced-motion preferences disable transitions.

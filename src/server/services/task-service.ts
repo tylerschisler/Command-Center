@@ -5,7 +5,7 @@ import type { ProjectRepository } from "@/server/repositories/project-repository
 import type { PersonRepository } from "@/server/repositories/person-repository";
 import type { TaskListFilters, TaskRepository } from "@/server/repositories/task-repository";
 import type { MeetingRepository } from "@/server/repositories/meeting-repository";
-import { NotFoundError, ValidationError } from "./service-errors";
+import { assertPermanentDeleteConfirmation, NotFoundError, ValidationError } from "./service-errors";
 import { idSchema, taskCreateSchema, taskUpdateSchema } from "./work-validation";
 
 export type TaskView = Task & { targetAfterDue: boolean; overdue: boolean; ownerName: string | null; unresolvedOwnership: boolean };
@@ -93,6 +93,14 @@ export class TaskService {
 
   restoreTask(id: string, source: NewActivityEvent["source"] = "manual"): TaskView {
     return this.setArchive(id, null, "TASK_RESTORED", source);
+  }
+
+  deleteTask(id: string, confirmation: unknown, source: NewActivityEvent["source"] = "manual") {
+    assertPermanentDeleteConfirmation(confirmation); idSchema.parse(id);
+    if (!this.repository.findById(id)) throw new NotFoundError("Task not found.");
+    const timestamp = this.now().toISOString();
+    if (!this.repository.delete(id, this.event("TASK_DELETED", id, "Permanently deleted a task.", source, {}, timestamp))) throw new NotFoundError("Task not found.");
+    return { deleted: true, id };
   }
 
   private setArchive(id: string, archivedAt: string | null, eventType: string, source: NewActivityEvent["source"]): TaskView {

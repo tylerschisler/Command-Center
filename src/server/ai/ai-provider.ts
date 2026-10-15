@@ -14,7 +14,7 @@ export interface AiProviderRequest {
 }
 export interface AiProviderResult {
   response: JarvisWorkspaceResponse;
-  usage: { provider: string; model: string; inputTokens: number; outputTokens: number; requestCount: number };
+  usage: { provider: string; model: string; inputTokens: number; cachedInputTokens: number; outputTokens: number; requestCount: number };
   executedTools: Array<{ name: string; result: AiToolResult }>;
 }
 

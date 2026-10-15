@@ -4,7 +4,8 @@ import { aiSettings, aiUsageRecords, voiceUsageRecords, type AiSettings, type Ai
 
 export type VoiceSettingsUpdate = Partial<Pick<AiSettings,
   "voiceEnabled" | "sttEnabled" | "voiceResponsesEnabled" | "speakConfirmations" | "speakBriefings" |
-  "speakLongResponses" | "automaticSpeechCharacterLimit" | "monthlyVoiceWarningSeconds"
+  "speakLongResponses" | "automaticSpeechCharacterLimit" | "monthlyVoiceWarningSeconds" |
+  "monthlyCostWarningMicros" | "monthlyCostCutoffMicros" | "hardCostCutoffEnabled"
 >>;
 
 export interface AiRepository {
@@ -13,8 +14,8 @@ export interface AiRepository {
   updateVoiceSettings(changes: VoiceSettingsUpdate, updatedAt: string): AiSettings;
   recordUsage(record: NewAiUsageRecord): AiUsageRecord;
   recordVoiceUsage(record: NewVoiceUsageRecord): VoiceUsageRecord;
-  usageSummary(): { requests: number; inputTokens: number; outputTokens: number; recent: AiUsageRecord[] };
-  voiceUsageSummary(monthStart: string): { transcriptionRequests: number; speechRequests: number; transcriptionDurationMs: number; speechCharacters: number; speechBytes: number; recent: VoiceUsageRecord[] };
+  usageSummary(monthStart?: string): { requests: number; inputTokens: number; outputTokens: number; estimatedCostMicros: number; unknownCostRecords: number; recent: AiUsageRecord[] };
+  voiceUsageSummary(monthStart: string): { transcriptionRequests: number; speechRequests: number; transcriptionDurationMs: number; speechCharacters: number; speechBytes: number; estimatedCostMicros: number; unknownCostRecords: number; recent: VoiceUsageRecord[] };
 }
 
 export class DrizzleAiRepository implements AiRepository {
@@ -34,9 +35,10 @@ export class DrizzleAiRepository implements AiRepository {
   }
   recordUsage(record: NewAiUsageRecord) { return this.database.insert(aiUsageRecords).values(record).returning().get(); }
   recordVoiceUsage(record: NewVoiceUsageRecord) { return this.database.insert(voiceUsageRecords).values(record).returning().get(); }
-  usageSummary() {
-    const totals = this.database.select({ requests: sql<number>`coalesce(sum(${aiUsageRecords.requestCount}), 0)`, inputTokens: sql<number>`coalesce(sum(${aiUsageRecords.inputTokens}), 0)`, outputTokens: sql<number>`coalesce(sum(${aiUsageRecords.outputTokens}), 0)` }).from(aiUsageRecords).get();
-    return { requests: Number(totals?.requests ?? 0), inputTokens: Number(totals?.inputTokens ?? 0), outputTokens: Number(totals?.outputTokens ?? 0), recent: this.database.select().from(aiUsageRecords).orderBy(desc(aiUsageRecords.requestTimestamp)).limit(20).all() };
+  usageSummary(monthStart?: string) {
+    const condition = monthStart ? gte(aiUsageRecords.requestTimestamp, monthStart) : undefined;
+    const totals = this.database.select({ requests: sql<number>`coalesce(sum(${aiUsageRecords.requestCount}), 0)`, inputTokens: sql<number>`coalesce(sum(${aiUsageRecords.inputTokens}), 0)`, outputTokens: sql<number>`coalesce(sum(${aiUsageRecords.outputTokens}), 0)`, estimatedCostMicros: sql<number>`coalesce(sum(${aiUsageRecords.estimatedCostMicros}), 0)`, unknownCostRecords: sql<number>`sum(case when ${aiUsageRecords.estimatedCostMicros} is null then 1 else 0 end)` }).from(aiUsageRecords).where(condition).get();
+    return { requests: Number(totals?.requests ?? 0), inputTokens: Number(totals?.inputTokens ?? 0), outputTokens: Number(totals?.outputTokens ?? 0), estimatedCostMicros: Number(totals?.estimatedCostMicros ?? 0), unknownCostRecords: Number(totals?.unknownCostRecords ?? 0), recent: this.database.select().from(aiUsageRecords).orderBy(desc(aiUsageRecords.requestTimestamp)).limit(20).all() };
   }
   voiceUsageSummary(monthStart: string) {
     const month = gte(voiceUsageRecords.requestTimestamp, monthStart);
@@ -48,6 +50,8 @@ export class DrizzleAiRepository implements AiRepository {
       transcriptionDurationMs: Number(transcription?.duration ?? 0),
       speechCharacters: Number(speech?.characters ?? 0),
       speechBytes: Number(speech?.bytes ?? 0),
+      estimatedCostMicros: Number(this.database.select({ value: sql<number>`coalesce(sum(${voiceUsageRecords.estimatedCostMicros}), 0)` }).from(voiceUsageRecords).where(month).get()?.value ?? 0),
+      unknownCostRecords: Number(this.database.select({ value: sql<number>`sum(case when ${voiceUsageRecords.estimatedCostMicros} is null then 1 else 0 end)` }).from(voiceUsageRecords).where(month).get()?.value ?? 0),
       recent: this.database.select().from(voiceUsageRecords).orderBy(desc(voiceUsageRecords.requestTimestamp)).limit(20).all(),
     };
   }

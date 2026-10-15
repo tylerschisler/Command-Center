@@ -4,10 +4,11 @@ type Context = Record<string, string | number | boolean | null | undefined>;
 type Level = "debug" | "info" | "warn" | "error";
 const rank: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
 const blocked = /secret|token|password|key|credential|authorization|cookie/i;
+const sensitiveValue = /(?:sk-[A-Za-z0-9_-]{16,}|CCREC1\.[A-Za-z0-9_-]+|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)/;
 
 function sanitize(context: Context): Context {
   return Object.fromEntries(
-    Object.entries(context).map(([key, value]) => [key, blocked.test(key) ? "[REDACTED]" : value]),
+    Object.entries(context).map(([key, value]) => [key, blocked.test(key) || (typeof value === "string" && sensitiveValue.test(value)) ? "[REDACTED]" : value]),
   );
 }
 

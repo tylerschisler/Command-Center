@@ -7,7 +7,7 @@ import type { ProjectRepository } from "@/server/repositories/project-repository
 import type { RequestListFilters, RequestRepository } from "@/server/repositories/request-repository";
 import type { TaskRepository } from "@/server/repositories/task-repository";
 import type { MeetingRepository } from "@/server/repositories/meeting-repository";
-import { NotFoundError, ValidationError } from "./service-errors";
+import { assertPermanentDeleteConfirmation, NotFoundError, ValidationError } from "./service-errors";
 import { idSchema, requestCreateSchema, requestUpdateSchema } from "./work-validation";
 
 export type RequestView = WorkRequest & { personName: string; projectName: string | null; relatedTaskTitle: string | null; overdue: boolean; followUpNeeded: boolean; dueSoon: boolean; waitingDays: number };
@@ -56,6 +56,13 @@ export class RequestService {
   closeRequest(id: string, source: NewActivityEvent["source"] = "manual") { return this.updateRequest(id, { status: "closed", source }); }
   archiveRequest(id: string, source: NewActivityEvent["source"] = "manual") { return this.setArchive(id, this.now().toISOString(), "REQUEST_ARCHIVED", source); }
   restoreRequest(id: string, source: NewActivityEvent["source"] = "manual") { return this.setArchive(id, null, "REQUEST_RESTORED", source); }
+  deleteRequest(id: string, confirmation: unknown, source: NewActivityEvent["source"] = "manual") {
+    assertPermanentDeleteConfirmation(confirmation); idSchema.parse(id);
+    if (!this.repository.findById(id)) throw new NotFoundError("Request not found.");
+    const timestamp = this.now().toISOString();
+    if (!this.repository.delete(id, this.event("REQUEST_DELETED", id, "Permanently deleted a request.", source, {}, timestamp))) throw new NotFoundError("Request not found.");
+    return { deleted: true, id };
+  }
   private setArchive(id: string, archivedAt: string | null, type: string, source: NewActivityEvent["source"]) {
     idSchema.parse(id); const existing = this.repository.findById(id); if (!existing) throw new NotFoundError("Request not found.");
     if (existing.archivedAt === archivedAt || (archivedAt && existing.archivedAt)) return this.toView(existing);

@@ -1,12 +1,13 @@
 import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
 import type { AppDatabase } from "@/server/db/client";
-import { activityEvents, people, type NewActivityEvent, type NewPerson, type Person } from "@/server/db/schema";
+import { activityEvents, entityRelationships, people, type NewActivityEvent, type NewPerson, type Person } from "@/server/db/schema";
 
 export interface PersonRepository {
   create(person: NewPerson, event: NewActivityEvent): Person;
   findById(id: string): Person | undefined;
   list(archived?: boolean): Person[];
   update(id: string, changes: Partial<NewPerson>, event: NewActivityEvent): Person | undefined;
+  delete(id: string, event: NewActivityEvent): boolean;
 }
 
 export class DrizzlePersonRepository implements PersonRepository {
@@ -30,6 +31,15 @@ export class DrizzlePersonRepository implements PersonRepository {
       if (!updated) return undefined;
       tx.insert(activityEvents).values(event).run();
       return updated;
+    });
+  }
+  delete(id: string, event: NewActivityEvent) {
+    return this.database.transaction((tx) => {
+      tx.delete(entityRelationships).where(and(eq(entityRelationships.targetType, "person"), eq(entityRelationships.targetId, id))).run();
+      const removed = tx.delete(people).where(eq(people.id, id)).returning({ id: people.id }).get();
+      if (!removed) return false;
+      tx.insert(activityEvents).values(event).run();
+      return true;
     });
   }
 }

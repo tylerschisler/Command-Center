@@ -146,7 +146,7 @@ Backup should run when:
 - user manually requests backup
 - before defined high-risk operations when practical
 
-Phase 1.5/1.6 implement manual create, validate, restore, and portable Keychain recovery only. Scheduling, daily/weekly/monthly retention tiers, secondary/sync destinations, full restore points, backup-management UI, and the full disaster-recovery workflow remain Phase 9 work.
+Phase 1.5/1.6 established manual create, validate, restore, and portable Keychain recovery. Phase 9 adds startup-driven daily checks, daily/weekly/monthly retention tiers, optional secondary folders, restore points, and the backup-management UI while preserving the same encrypted archive and recovery boundaries.
 
 ## Restore Testing
 Automated test must:
@@ -221,3 +221,19 @@ The browser sends audio to a local server route over multipart form data. The ro
 OpenAI speech calls reuse the Phase 7 server-only API-key boundary. Speech failure logs contain only provider, model, stage, HTTP status, provider error type/code, and request ID. They exclude audio, transcripts, prompts, tool payloads, model output, and secrets. STT failure preserves typed/manual workflows; TTS failure cannot invalidate an already completed Jarvis action.
 
 Voice settings and aggregate usage metadata live inside encrypted SQLite. Usage records contain no raw audio or transcript. `OPENAI_STT_MODEL`, `OPENAI_TTS_MODEL`, and `OPENAI_TTS_VOICE` are server-only environment values without a `NEXT_PUBLIC_` prefix. Estimated speech cost remains null until reliable configurable pricing is introduced; Phase 9 may add cost cutoffs without changing this data-minimizing boundary.
+
+## Phase 9 Hardening
+
+Public Intelligence feeds are an explicit network boundary. Defaults are reviewed government feeds and configuration accepts at most 20 public HTTP(S) RSS/Atom URLs. Literal localhost, private-network, file, data, and JavaScript URLs are rejected. Retrieved HTML is never rendered; scripts/styles/tags are stripped and bounded structured text is stored. Article text is never allowed to invoke Jarvis tools, alter permissions, or trigger a write. Save to Knowledge is an explicit user action.
+
+Automatic and secondary backups retain `CCBACKUP1` authenticated encryption. The secondary destination receives no plaintext. Restore requires archive validation and typed confirmation, protects the active encrypted database first, verifies activation, and rolls back on failure. Cleanup requires configured-root containment and managed filenames; unrelated files and failed-validation artifacts are not deleted.
+
+Usage estimates contain no prompts, responses, audio, or Knowledge content. Budget enforcement is optional and applies only to cloud AI/speech. Unknown pricing remains unknown. Pricing configuration is versioned separately from service logic.
+
+The V1 secret scan rejects tracked `.env`, database, backup, recovery, private-key, OpenAI-key, and portable-recovery credential material. Logger redaction covers sensitive context keys and recognizable secret values. Network/provider logs remain limited to safe status, request ID, provider/model, stage, and error metadata.
+
+The dependency audit on 2026-10-14 found zero production/runtime vulnerabilities. Nine advisory paths (five high, four moderate) remain in development-only tooling: the Next ESLint glob chain and Drizzle Kit's legacy esbuild loader. Next and its matching ESLint configuration were updated to 16.4.1. npm currently offers only breaking/downgrade suggestions that do not remove the affected maintained dependency paths; forced fixes were intentionally deferred. Development servers must remain bound to localhost and untrusted glob patterns must not be accepted from network input.
+
+## V1.1 permanent deletion
+
+Permanent deletion requires an explicit typed confirmation in both the UI and service method; API callers cannot bypass the service check. Each repository executes relationship cleanup, domain deletion, and the deletion ActivityEvent atomically. Events retain entity type/ID and a generic action description but omit deleted titles, notes, page content, and other sensitive fields. Project deletion detaches rather than cascades domain work. Person deletion fails while any Task or Request assignment remains, including completed or archived records. Knowledge versions, taxonomy joins, relationships, and FTS entries are removed transactionally. These operations never inspect or modify encrypted backups, protected pre-restore copies, Keychain state, or recovery material; previously created backups may still contain the deleted historical record until normal encrypted retention expires.

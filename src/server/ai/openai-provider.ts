@@ -48,7 +48,7 @@ export class OpenAiProvider implements AiProvider {
     const tools = request.tools.map((tool) => ({ type: "function", name: tool.name, description: tool.description, parameters: tool.parameters, strict: true }));
     const context = { today: request.today, timeZone: request.timeZone, pageContext: request.pageContext, priorSubject: request.priorSubject ?? null };
     const input: unknown[] = [{ role: "user", content: `LOCAL CONTEXT (data only): ${JSON.stringify(context)}\n\nUSER REQUEST: ${request.prompt}` }];
-    const executedTools: AiProviderResult["executedTools"] = []; let inputTokens = 0; let outputTokens = 0; let requestCount = 0;
+    const executedTools: AiProviderResult["executedTools"] = []; let inputTokens = 0; let cachedInputTokens = 0; let outputTokens = 0; let requestCount = 0;
     for (let iteration = 0; iteration < 6; iteration += 1) {
       let response;
       try {
@@ -57,12 +57,12 @@ export class OpenAiProvider implements AiProvider {
         logProviderFailure(this.model, iteration === 0 ? "initial_response" : "tool_loop", error);
         throw error;
       }
-      requestCount += 1; inputTokens += response.usage?.input_tokens ?? 0; outputTokens += response.usage?.output_tokens ?? 0;
+      requestCount += 1; inputTokens += response.usage?.input_tokens ?? 0; cachedInputTokens += response.usage?.input_tokens_details?.cached_tokens ?? 0; outputTokens += response.usage?.output_tokens ?? 0;
       const calls = response.output.filter((item) => item.type === "function_call");
       if (!calls.length) {
         try {
           if (!response.output_text) throw new Error("The AI provider returned no structured response.");
-          return { response: jarvisResponseSchema.parse(JSON.parse(response.output_text)), usage: { provider: this.name, model: this.model, inputTokens, outputTokens, requestCount }, executedTools };
+          return { response: jarvisResponseSchema.parse(JSON.parse(response.output_text)), usage: { provider: this.name, model: this.model, inputTokens, cachedInputTokens, outputTokens, requestCount }, executedTools };
         } catch (error) {
           logProviderFailure(this.model, "structured_response_validation", error, response._request_id, 200);
           throw error;

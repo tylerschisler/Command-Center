@@ -15,6 +15,7 @@ export interface RequestRepository {
   findById(id: string): WorkRequest | undefined;
   list(filters?: RequestListFilters): WorkRequest[];
   update(id: string, changes: Partial<NewWorkRequest>, event: NewActivityEvent): WorkRequest | undefined;
+  delete(id: string, event: NewActivityEvent): boolean;
 }
 export class DrizzleRequestRepository implements RequestRepository {
   constructor(private readonly database: AppDatabase) {}
@@ -41,6 +42,14 @@ export class DrizzleRequestRepository implements RequestRepository {
       if (!updated) return undefined;
       tx.insert(activityEvents).values(event).run();
       return updated;
+    });
+  }
+  delete(id: string, event: NewActivityEvent) {
+    return this.database.transaction((tx) => {
+      const removed = tx.delete(requests).where(eq(requests.id, id)).returning({ id: requests.id }).get();
+      if (!removed) return false;
+      tx.insert(activityEvents).values(event).run();
+      return true;
     });
   }
 }

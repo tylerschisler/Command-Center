@@ -282,7 +282,7 @@ Restore:
 
 Phase 1.5 restore validates the envelope authentication tag, database hash, encryption key, and SQLite integrity before replacement. It closes the application connection, checkpoints the current database, and renames the current encrypted file to a unique `pre-restore` copy before moving the validated restore into place. A failed final integrity check rolls the protected database back. The CLI requires an explicit `--confirm` argument.
 
-Pre-conversion copies are created only by an explicit plaintext conversion, after the source itself has been encrypted and the replacement has passed integrity validation. Pre-restore copies are created only after a backup has been authenticated and integrity-checked. They may be deleted after the active database has been reopened and verified and a separate backup is known good. Phase 1.6 automatically retains at most the three newest copies of each type after a successful operation; it never prunes the rollback copy before success. Scheduling, tiered backup retention, secondary destinations, backup-management UI, and the complete disaster-recovery workflow remain Phase 9 work.
+Pre-conversion copies are created only by an explicit plaintext conversion, after the source itself has been encrypted and the replacement has passed integrity validation. Pre-restore copies are created only after a backup has been authenticated and integrity-checked. They may be deleted after the active database has been reopened and verified and a separate backup is known good. Phase 1.6 automatically retains at most the three newest copies of each type after a successful operation; it never prunes the rollback copy before success. Phase 9 adds startup-driven scheduling, tiered backup retention, secondary destinations, and backup-management UI on top of that protected-copy policy.
 
 ## Restore Points
 Create lightweight restore points before:
@@ -345,4 +345,36 @@ TTS is a non-authoritative presentation step. `VoiceService` first completes Jar
 
 Meeting Mode publishes an explicit Meeting page context to the existing Jarvis surface. Meeting notes, decisions, Tasks, and Requests still use the allowlisted tools and existing Meeting, Task, and Request services. There is no continuous meeting capture, diarization, or full-meeting transcription.
 
-Encrypted `voice_usage_records` contain only operation kind, provider/model, timestamp, duration, character count, byte count, and an optional future cost field. Pricing is not hard-coded. The local settings table includes voice/STT/TTS switches, spoken-output policy, an automatic character limit, and an optional monthly transcription-duration warning. Automatic cost cutoffs and broader budget management remain Phase 9 hardening work.
+Encrypted `voice_usage_records` contain only operation kind, provider/model, timestamp, duration, character count, byte count, and an estimated-cost field. Pricing is versioned outside the service layer. The local settings table includes voice/STT/TTS switches, spoken-output policy, an automatic character limit, optional warning thresholds, and an opt-in hard cutoff for nonessential AI usage.
+
+## Phase 9 V1 Completion Architecture
+
+### Intelligence
+
+`PublicFeedIntelligenceProvider` retrieves only configured public RSS/Atom endpoints. The reviewed defaults are CISA, NIST, and SEC; `INTELLIGENCE_SOURCES_JSON` may replace them with a bounded, validated list. Feed failures are isolated per source. URLs are restricted to public HTTP(S), tracking fragments are removed for deduplication, and source HTML is converted to bounded plain text. Retrieved instructions remain inert data and are never sent to the Jarvis tool loop.
+
+`IntelligenceService` classifies topics and ranks items with explainable inputs: authority (0–25), freshness (0–25), topic matches (0–30), financial/third-party relevance (0–15), and significant-event terms (0–5). It persists through `IntelligenceRepository`, deduplicates by canonical URL and normalized headline/publication day, and records one aggregate refresh event. Save to Knowledge calls `KnowledgeService`, stores summary/metadata/user notes rather than article text, and preserves normal KnowledgeVersion and ActivityEvent behavior. Home and Morning Briefing consume only persisted high-relevance items.
+
+### Backup scheduling and retention
+
+`BackupManagerService` wraps the unchanged authenticated `CCBACKUP1` cryptography. A non-blocking browser startup check asks the local server whether a validated backup is at least 24 hours old; if so, one is created and validated. Manual Backup Now follows the same path. Migration CLI runs create a validated encrypted restore point before modifying an existing database.
+
+Retention processes successful managed archives newest-first: retain the newest backup for 14 distinct days, then the newest for 8 additional ISO weeks, then the newest for 12 additional months. The newest known-good backup is always retained. Failed and failed-validation records are never retention deletion candidates. Deletion requires both a managed filename and containment inside the configured primary/secondary root. Stale managed `.tmp` files older than 24 hours are removed; encrypted pre-restore/pre-encryption copies remain bounded to three by the existing protected-copy policy.
+
+Optional secondary folders receive the already encrypted archive by temporary copy plus atomic rename. Primary success is recorded as `partial` if secondary copying fails. Restore requires selecting a managed record, revalidation, typing `RESTORE`, protected-current-state replacement, post-activation verification, automatic rollback on failure, and `BACKUP_RESTORED` activity.
+
+### Cost controls and model-routing hook
+
+Pricing is isolated in `src/config/pricing.ts` with a version and per-model text, transcription, or speech units. Standard `gpt-5.6-terra` pricing is $2.00 input, $0.20 cached input, and $12.00 output per million tokens. Responses API cached-input counts are applied to the estimate when present; usage records store the resulting estimate at request time without adding prompt content or a schema field. Unknown models remain null and render as Unknown rather than zero. Monthly warnings are informational; the optional hard cutoff gates Jarvis, STT, and TTS before provider calls while local application services and deterministic briefings remain available. `OPENAI_SIMPLE_MODEL` is a documented routing target, but V1 does not silently switch models.
+
+### Network boundaries
+
+Only OpenAI Jarvis, OpenAI STT/TTS, and configured Intelligence feeds access the network. Task, Project, Request, Meeting, People, Knowledge, FTS5, Calendar, deterministic Briefing, encryption, and local/secondary-folder backup workflows remain offline-capable. No telemetry or analytics transport exists.
+
+## V1.1 reliability and deletion boundaries
+
+Primary navigation is defined once in `src/config/navigation.ts`; the client navigation component computes exact-root and section-prefix active state with `usePathname`. Home remains the normal `/` App Router page. The observed Home failure was not a redirect or route-table defect: Playwright reused an orphan development server whose isolated database had already been removed. E2E now always starts its guarded temporary-database server, and navigation tests cover direct load, refresh, every section-to-Home path, active state, and keyboard activation.
+
+`/api/ai/settings` continues to return the server-owned complete settings contract. The Jarvis client additionally normalizes unknown, legacy, or partial responses into a complete fail-safe voice object while preserving a valid `cloudAiEnabled` value. Fetch failures disable voice presentation only; typed Jarvis remains independent. This fixes the regression where a truthy error/partial object could be stored as settings and `settings.voice.enabled` then threw.
+
+Permanent deletion is an explicit service operation requiring the literal `DELETE` confirmation. Repositories combine domain deletion, relationship handling, and a content-minimized deletion ActivityEvent in one transaction. Project deletion preserves Tasks, Requests, and Meetings while clearing `projectId`, and removes Knowledge relationships targeting the Project. Person deletion is blocked while any active, completed, or archived Task or Request assignment exists. Meeting deletion preserves linked Tasks/Requests through `SET NULL`; attendee/decision rows are removed. Knowledge deletion removes incoming/outgoing entity relationships and relies on transactional foreign-key cascades plus existing FTS triggers for versions, taxonomy links, and search entries. No deletion API is exposed to Jarvis.

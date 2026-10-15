@@ -35,3 +35,44 @@ test("Jarvis stays opt-in and performs a grounded service action", async ({ page
   await page.getByRole("textbox", { name: "Ask Jarvis" }).fill("Give me my weekly review"); await page.getByRole("button", { name: "Run" }).click(); await expect(page.getByRole("heading", { name: "Weekly Review" })).toBeVisible();
   await page.getByRole("button", { name: "Close Jarvis" }).click(); await page.goto("/settings"); await page.getByRole("checkbox", { name: "Cloud AI Enabled" }).uncheck(); await page.getByRole("button", { name: /Ask Jarvis/ }).click(); await page.getByRole("textbox", { name: "Ask Jarvis" }).fill("What should I focus on today?"); await page.getByRole("button", { name: "Run" }).click(); await expect(page.getByText(/Jarvis is unavailable because Cloud AI is disabled/)).toBeVisible();
 });
+
+test("Jarvis tolerates loading, legacy settings, missing STT, API failure, and reload", async ({ page }) => {
+  await page.request.patch("/api/ai/settings", { data: { cloudAiEnabled: true, voiceEnabled: false } });
+  await page.route("**/api/ai/settings", async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ cloudAiEnabled: true }) });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /Ask Jarvis/ }).click();
+  await expect(page.getByRole("textbox", { name: "Ask Jarvis" })).toBeVisible();
+  await expect(page.getByText("Voice input is off.")).toBeVisible();
+  await page.getByRole("textbox", { name: "Ask Jarvis" }).fill("What should I focus on today?");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(page.getByRole("heading", { name: "Today’s Focus" })).toBeVisible();
+  await page.getByRole("button", { name: "Close Jarvis" }).click();
+
+  await page.unroute("**/api/ai/settings");
+  await page.route("**/api/ai/settings", async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ cloudAiEnabled: true, voice: { enabled: true, sttEnabled: true, sttConfigured: false } }) });
+  });
+  await page.getByRole("button", { name: /Ask Jarvis/ }).click();
+  await expect(page.getByText(/Configure.*OPENAI_STT_MODEL/)).toBeVisible();
+  await page.getByRole("button", { name: "Close Jarvis" }).click();
+
+  await page.unroute("**/api/ai/settings");
+  await page.route("**/api/ai/settings", async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "unavailable" }) });
+  });
+  await page.getByRole("button", { name: /Ask Jarvis/ }).click();
+  await expect(page.getByText("Voice settings could not be loaded. Typed Jarvis remains available.")).toBeVisible();
+  await page.getByRole("textbox", { name: "Ask Jarvis" }).fill("What should I focus on today?");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(page.getByRole("heading", { name: "Today’s Focus" })).toBeVisible();
+  await page.getByRole("button", { name: "Close Jarvis" }).click();
+  await page.reload();
+  await page.getByRole("button", { name: /Ask Jarvis/ }).click();
+  await expect(page.getByRole("textbox", { name: "Ask Jarvis" })).toBeVisible();
+  await expect(page.getByText("Voice settings could not be loaded. Typed Jarvis remains available.")).toBeVisible();
+});

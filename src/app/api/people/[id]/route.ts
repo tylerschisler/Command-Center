@@ -15,3 +15,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return Response.json({ person });
   } catch (error) { return workErrorResponse(error); }
 }
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
+  try { const body = await readJson(request); return Response.json(createWorkServices().people.deletePerson((await context.params).id, body.confirmation)); }
+  catch (error) { return workErrorResponse(error); }
+}

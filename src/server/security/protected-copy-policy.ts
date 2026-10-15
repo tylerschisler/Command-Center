@@ -7,7 +7,7 @@ export function pruneProtectedCopies(databasePath: string, kind: ProtectedCopyKi
   if (!Number.isInteger(keep) || keep < 1) throw new Error("Protected-copy retention must keep at least one copy.");
   const activePath = path.resolve(databasePath);
   const directory = path.dirname(activePath);
-  if (!fs.existsSync(directory)) return [];
+  if (!fs.existsSync(/* turbopackIgnore: true */ directory)) return [];
   const prefix = `${path.basename(activePath)}.${kind}-`;
   const candidates = fs.readdirSync(directory)
     .filter((name) => name.startsWith(prefix) && name.endsWith(".db"))
@@ -23,7 +23,7 @@ export function pruneProtectedCopies(databasePath: string, kind: ProtectedCopyKi
     fs.rmSync(candidate.resolved);
     for (const suffix of ["-wal", "-shm"]) {
       const sidecar = `${candidate.resolved}${suffix}`;
-      if (fs.existsSync(sidecar)) fs.rmSync(sidecar);
+      if (fs.existsSync(/* turbopackIgnore: true */ sidecar)) fs.rmSync(sidecar);
     }
     removed.push(candidate.resolved);
   }

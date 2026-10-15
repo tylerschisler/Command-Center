@@ -36,6 +36,7 @@ export interface BackupServiceOptions {
   keyProvider: DatabaseKeyProvider;
   closeActiveDatabase?: () => void;
   recoveryMaterialPath?: string;
+  verifyActivatedDatabase?: (databasePath: string) => void;
 }
 
 export interface BackupResult {
@@ -136,7 +137,7 @@ export class BackupService {
         databaseSha256: sha256(databaseBytes),
         databaseBytes: databaseBytes.length,
         schemaVersion: readSchemaVersion(this.options.databasePath, databaseKey),
-        ...(this.options.recoveryMaterialPath && fs.existsSync(this.options.recoveryMaterialPath)
+        ...(this.options.recoveryMaterialPath && fs.existsSync(/* turbopackIgnore: true */ this.options.recoveryMaterialPath)
           ? { recoveryMaterial: readRecoveryMaterial(this.options.recoveryMaterialPath).toString("base64") }
           : {}),
       };
@@ -149,13 +150,13 @@ export class BackupService {
         this.options.backupDirectory,
         `command-center-${metadata.createdAt.replaceAll(":", "-")}-${metadata.backupId}.ccbackup`,
       );
-      fs.mkdirSync(path.dirname(path.resolve(backupPath)), { recursive: true, mode: 0o700 });
+      fs.mkdirSync(path.dirname(path.resolve(/* turbopackIgnore: true */ backupPath)), { recursive: true, mode: 0o700 });
       const temporaryPath = `${backupPath}.${randomUUID()}.tmp`;
       try {
         fs.writeFileSync(temporaryPath, encoded, { mode: 0o600, flag: "wx" });
         fs.renameSync(temporaryPath, backupPath);
       } finally {
-        if (fs.existsSync(temporaryPath)) fs.rmSync(temporaryPath);
+        if (fs.existsSync(/* turbopackIgnore: true */ temporaryPath)) fs.rmSync(temporaryPath);
         backupKey.fill(0);
         databaseBytes.fill(0);
       }
@@ -197,7 +198,7 @@ export class BackupService {
       databaseBytes.fill(0);
 
       let protectedDatabasePath: string | null = null;
-      if (fs.existsSync(activePath)) {
+      if (fs.existsSync(/* turbopackIgnore: true */ activePath)) {
         const current = openEncryptedSqlite(activePath, databaseKey);
         try {
           current.pragma("wal_checkpoint(TRUNCATE)");
@@ -207,7 +208,7 @@ export class BackupService {
         protectedDatabasePath = `${activePath}.pre-restore-${Date.now()}-${randomUUID()}.db`;
         fs.renameSync(activePath, protectedDatabasePath);
         for (const suffix of ["-wal", "-shm"]) {
-          if (fs.existsSync(`${activePath}${suffix}`)) fs.renameSync(`${activePath}${suffix}`, `${protectedDatabasePath}${suffix}`);
+          if (fs.existsSync(/* turbopackIgnore: true */ `${activePath}${suffix}`)) fs.renameSync(`${activePath}${suffix}`, `${protectedDatabasePath}${suffix}`);
         }
       }
 
@@ -220,6 +221,7 @@ export class BackupService {
         } finally {
           restored.close();
         }
+        this.options.verifyActivatedDatabase?.(activePath);
         const restoredDatabase = createDatabase(activePath, new StaticDatabaseKeyProvider(databaseKey));
         try {
           new ActivityService(new DrizzleActivityEventRepository(restoredDatabase)).record({
@@ -235,11 +237,11 @@ export class BackupService {
         }
         pruneProtectedCopies(activePath, "pre-restore");
       } catch (error) {
-        if (fs.existsSync(activePath)) fs.rmSync(activePath);
+        for (const suffix of ["", "-wal", "-shm"]) if (fs.existsSync(/* turbopackIgnore: true */ `${activePath}${suffix}`)) fs.rmSync(`${activePath}${suffix}`);
         if (protectedDatabasePath) {
           fs.renameSync(protectedDatabasePath, activePath);
           for (const suffix of ["-wal", "-shm"]) {
-            if (fs.existsSync(`${protectedDatabasePath}${suffix}`)) fs.renameSync(`${protectedDatabasePath}${suffix}`, `${activePath}${suffix}`);
+            if (fs.existsSync(/* turbopackIgnore: true */ `${protectedDatabasePath}${suffix}`)) fs.renameSync(`${protectedDatabasePath}${suffix}`, `${activePath}${suffix}`);
           }
         }
         throw error;
@@ -247,7 +249,7 @@ export class BackupService {
 
       return { metadata, protectedDatabasePath };
     } finally {
-      if (restoredTemporaryPath && fs.existsSync(restoredTemporaryPath)) fs.rmSync(restoredTemporaryPath);
+      if (restoredTemporaryPath && fs.existsSync(/* turbopackIgnore: true */ restoredTemporaryPath)) fs.rmSync(restoredTemporaryPath);
       decryptedDatabaseBytes?.fill(0);
       databaseKey.fill(0);
     }
@@ -287,7 +289,7 @@ export class BackupService {
         database.close();
       }
     } finally {
-      for (const suffix of ["", "-wal", "-shm"]) if (fs.existsSync(`${validationPath}${suffix}`)) fs.rmSync(`${validationPath}${suffix}`);
+      for (const suffix of ["", "-wal", "-shm"]) if (fs.existsSync(/* turbopackIgnore: true */ `${validationPath}${suffix}`)) fs.rmSync(`${validationPath}${suffix}`);
     }
   }
 }

@@ -1,6 +1,6 @@
 import { and, asc, eq, isNotNull, isNull, type SQL } from "drizzle-orm";
 import type { AppDatabase } from "@/server/db/client";
-import { activityEvents, meetingDecisions, meetingParticipants, meetings, type Meeting, type MeetingDecision, type NewActivityEvent, type NewMeeting, type NewMeetingDecision } from "@/server/db/schema";
+import { activityEvents, entityRelationships, meetingDecisions, meetingParticipants, meetings, type Meeting, type MeetingDecision, type NewActivityEvent, type NewMeeting, type NewMeetingDecision } from "@/server/db/schema";
 
 export interface MeetingListFilters {
   projectId?: string;
@@ -19,6 +19,7 @@ export interface MeetingRepository {
   removeParticipant(meetingId: string, personId: string, event: NewActivityEvent): boolean;
   listDecisions(meetingId: string): MeetingDecision[];
   addDecision(decision: NewMeetingDecision, event: NewActivityEvent): MeetingDecision;
+  delete(id: string, event: NewActivityEvent): boolean;
 }
 
 export class DrizzleMeetingRepository implements MeetingRepository {
@@ -67,5 +68,14 @@ export class DrizzleMeetingRepository implements MeetingRepository {
   listDecisions(meetingId: string) { return this.database.select().from(meetingDecisions).where(eq(meetingDecisions.meetingId, meetingId)).orderBy(asc(meetingDecisions.createdAt)).all(); }
   addDecision(decision: NewMeetingDecision, event: NewActivityEvent) {
     return this.database.transaction((tx) => { const created = tx.insert(meetingDecisions).values(decision).returning().get(); tx.insert(activityEvents).values(event).run(); return created; });
+  }
+  delete(id: string, event: NewActivityEvent) {
+    return this.database.transaction((tx) => {
+      tx.delete(entityRelationships).where(and(eq(entityRelationships.targetType, "meeting"), eq(entityRelationships.targetId, id))).run();
+      const removed = tx.delete(meetings).where(eq(meetings.id, id)).returning({ id: meetings.id }).get();
+      if (!removed) return false;
+      tx.insert(activityEvents).values(event).run();
+      return true;
+    });
   }
 }

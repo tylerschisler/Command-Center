@@ -41,7 +41,7 @@ export class DeterministicFakeAiProvider implements AiProvider {
     } else {
       response = this.basic("workspace", "Jarvis Workspace", "I need a more specific request or matching local context.", "summary");
     }
-    return { response, usage: { provider: this.name, model: this.model, inputTokens: 0, outputTokens: 0, requestCount: 1 }, executedTools };
+    return { response, usage: { provider: this.name, model: this.model, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, requestCount: 1 }, executedTools };
   }
   private basic(mode: "ambient" | "action_summary" | "workspace", title: string, summary: string, type: "summary" | "warning"): JarvisWorkspaceResponse { return { mode, title, summary, blocks: [{ type, heading: title, text: summary, metrics: [], items: [] }], actions: [], navigation: null }; }
   private mutationResponse(result: AiToolResult, title: string): JarvisWorkspaceResponse {

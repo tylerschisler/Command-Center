@@ -9,7 +9,7 @@ import type { RequestRepository } from "@/server/repositories/request-repository
 import type { TaskRepository } from "@/server/repositories/task-repository";
 import type { RequestService } from "./request-service";
 import type { TaskService } from "./task-service";
-import { NotFoundError, ValidationError } from "./service-errors";
+import { assertPermanentDeleteConfirmation, NotFoundError, ValidationError } from "./service-errors";
 import { decisionCreateSchema, idSchema, meetingCreateSchema, meetingUpdateSchema } from "./work-validation";
 
 export class MeetingService {
@@ -56,6 +56,13 @@ export class MeetingService {
   cancelMeeting(id: string, source: NewActivityEvent["source"] = "manual") { return this.updateMeeting(id, { status: "cancelled", source }); }
   archiveMeeting(id: string, source: NewActivityEvent["source"] = "manual") { return this.setArchive(id, this.now().toISOString(), "MEETING_ARCHIVED", source); }
   restoreMeeting(id: string, source: NewActivityEvent["source"] = "manual") { return this.setArchive(id, null, "MEETING_RESTORED", source); }
+  deleteMeeting(id: string, confirmation: unknown, source: NewActivityEvent["source"] = "manual") {
+    assertPermanentDeleteConfirmation(confirmation); idSchema.parse(id);
+    if (!this.repository.findById(id)) throw new NotFoundError("Meeting not found.");
+    const timestamp = this.now().toISOString();
+    if (!this.repository.delete(id, this.event("MEETING_DELETED", id, "Permanently deleted a meeting.", source, {}, timestamp))) throw new NotFoundError("Meeting not found.");
+    return { deleted: true, id };
+  }
   addParticipant(meetingId: string, personId: string, source: NewActivityEvent["source"] = "manual") {
     const meeting = this.requireMeeting(meetingId); idSchema.parse(personId); this.assertPerson(personId); const timestamp = this.now().toISOString();
     this.repository.addParticipant(meetingId, personId, timestamp, this.event("MEETING_PARTICIPANT_ADDED", meetingId, `Added a participant to meeting “${meeting.title}”.`, source, { personId }, timestamp)); return this.getMeeting(meetingId);

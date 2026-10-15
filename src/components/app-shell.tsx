@@ -1,22 +1,17 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { JarvisSurface } from "@/components/jarvis/jarvis-surface";
-
-export const navigation = [
-  ["Home", "/"], ["My Work", "/my-work"], ["Projects", "/projects"],
-  ["Waiting On", "/waiting-on"], ["Calendar", "/calendar"], ["People", "/people"],
-  ["Knowledge", "/knowledge"], ["Intelligence", "/intelligence"], ["Settings", "/settings"],
-] as const;
+import { StartupBackupCheck } from "@/components/backups/startup-backup-check";
+import { PrimaryNavigation } from "@/components/primary-navigation";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="shell">
+      <StartupBackupCheck />
       <a className="skip-link" href="#main-content">Skip to content</a>
       <aside className="sidebar">
         <Link className="brand" href="/" aria-label="Command Center home"><span aria-hidden="true">C</span><strong>Command Center</strong></Link>
-        <nav aria-label="Primary navigation">
-          <ul>{navigation.map(([label, href]) => <li key={href}><Link href={href}>{label}</Link></li>)}</ul>
-        </nav>
+        <PrimaryNavigation />
         <div className="local-status"><span aria-hidden="true" /> Local workspace</div>
       </aside>
       <div className="workspace">

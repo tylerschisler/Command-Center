@@ -55,6 +55,7 @@ export interface KnowledgeRepository {
   listRelationshipsTo(targetType: string, targetId: string): EntityRelationship[];
   addRelationship(relationship: NewEntityRelationship, event: NewActivityEvent): EntityRelationship;
   removeRelationship(id: string, pageId: string, event: NewActivityEvent): boolean;
+  delete(id: string, event: NewActivityEvent): boolean;
 }
 
 export class DrizzleKnowledgeRepository implements KnowledgeRepository {
@@ -66,6 +67,17 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
       tx.insert(knowledgeVersions).values(version).run();
       tx.insert(activityEvents).values(event).run();
       return created;
+    });
+  }
+
+  delete(id: string, event: NewActivityEvent) {
+    return this.database.transaction((tx) => {
+      tx.delete(entityRelationships).where(and(eq(entityRelationships.sourceType, "knowledge_page"), eq(entityRelationships.sourceId, id))).run();
+      tx.delete(entityRelationships).where(and(eq(entityRelationships.targetType, "knowledge_page"), eq(entityRelationships.targetId, id))).run();
+      const removed = tx.delete(knowledgePages).where(eq(knowledgePages.id, id)).returning({ id: knowledgePages.id }).get();
+      if (!removed) return false;
+      tx.insert(activityEvents).values(event).run();
+      return true;
     });
   }
 

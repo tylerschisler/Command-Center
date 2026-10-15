@@ -321,11 +321,16 @@ export const aiSettings = sqliteTable("ai_settings", {
   speakLongResponses: text("speak_long_responses", { enum: ["ask", "on", "off"] }).notNull().default("ask"),
   automaticSpeechCharacterLimit: integer("automatic_speech_character_limit").notNull().default(280),
   monthlyVoiceWarningSeconds: integer("monthly_voice_warning_seconds"),
+  monthlyCostWarningMicros: integer("monthly_cost_warning_micros"),
+  monthlyCostCutoffMicros: integer("monthly_cost_cutoff_micros"),
+  hardCostCutoffEnabled: integer("hard_cost_cutoff_enabled", { mode: "boolean" }).notNull().default(false),
   updatedAt: text("updated_at").notNull(),
 }, (table) => [
   check("ai_settings_long_response_check", sql`${table.speakLongResponses} in ('ask','on','off')`),
   check("ai_settings_speech_limit_check", sql`${table.automaticSpeechCharacterLimit} between 80 and 1000`),
   check("ai_settings_voice_warning_check", sql`${table.monthlyVoiceWarningSeconds} is null or ${table.monthlyVoiceWarningSeconds} > 0`),
+  check("ai_settings_cost_warning_check", sql`${table.monthlyCostWarningMicros} is null or ${table.monthlyCostWarningMicros} > 0`),
+  check("ai_settings_cost_cutoff_check", sql`${table.monthlyCostCutoffMicros} is null or ${table.monthlyCostCutoffMicros} > 0`),
 ]);
 
 export const aiUsageRecords = sqliteTable(
@@ -366,6 +371,64 @@ export const voiceUsageRecords = sqliteTable(
   ],
 );
 
+export const intelligenceItems = sqliteTable(
+  "intelligence_items",
+  {
+    id: text("id").primaryKey(),
+    headline: text("headline").notNull(),
+    normalizedHeadline: text("normalized_headline").notNull(),
+    sourceName: text("source_name").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    canonicalUrl: text("canonical_url").notNull().unique(),
+    publicationDate: text("publication_date").notNull(),
+    fetchedAt: text("fetched_at").notNull(),
+    summary: text("summary").notNull(),
+    relevanceScore: integer("relevance_score").notNull(),
+    whyItMatters: text("why_it_matters").notNull(),
+    topics: text("topics", { mode: "json" }).$type<string[]>().notNull(),
+    savedKnowledgePageId: text("saved_knowledge_page_id").references(() => knowledgePages.id, { onDelete: "set null" }),
+  },
+  (table) => [
+    index("intelligence_publication_idx").on(table.publicationDate),
+    index("intelligence_relevance_idx").on(table.relevanceScore),
+    index("intelligence_headline_idx").on(table.normalizedHeadline),
+    check("intelligence_relevance_check", sql`${table.relevanceScore} between 0 and 100`),
+  ],
+);
+
+export const backupSettings = sqliteTable("backup_settings", {
+  id: text("id").primaryKey(),
+  automaticEnabled: integer("automatic_enabled", { mode: "boolean" }).notNull().default(true),
+  secondaryDirectory: text("secondary_directory"),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const backupRecords = sqliteTable(
+  "backup_records",
+  {
+    id: text("id").primaryKey(),
+    backupId: text("backup_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    completedAt: text("completed_at"),
+    status: text("status", { enum: ["running", "valid", "partial", "failed_validation", "failed"] }).notNull(),
+    trigger: text("trigger", { enum: ["automatic", "manual", "restore_point"] }).notNull(),
+    fileName: text("file_name").notNull(),
+    primaryPath: text("primary_path").notNull(),
+    secondaryPath: text("secondary_path"),
+    secondaryStatus: text("secondary_status", { enum: ["not_configured", "copied", "failed"] }).notNull(),
+    schemaVersion: integer("schema_version"),
+    databaseBytes: integer("database_bytes"),
+    errorCode: text("error_code"),
+  },
+  (table) => [
+    index("backup_records_created_idx").on(table.createdAt),
+    index("backup_records_status_idx").on(table.status),
+    check("backup_records_status_check", sql`${table.status} in ('running','valid','partial','failed_validation','failed')`),
+    check("backup_records_trigger_check", sql`${table.trigger} in ('automatic','manual','restore_point')`),
+    check("backup_records_secondary_check", sql`${table.secondaryStatus} in ('not_configured','copied','failed')`),
+  ],
+);
+
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
@@ -396,3 +459,8 @@ export type AiUsageRecord = typeof aiUsageRecords.$inferSelect;
 export type NewAiUsageRecord = typeof aiUsageRecords.$inferInsert;
 export type VoiceUsageRecord = typeof voiceUsageRecords.$inferSelect;
 export type NewVoiceUsageRecord = typeof voiceUsageRecords.$inferInsert;
+export type IntelligenceItem = typeof intelligenceItems.$inferSelect;
+export type NewIntelligenceItem = typeof intelligenceItems.$inferInsert;
+export type BackupSettings = typeof backupSettings.$inferSelect;
+export type BackupRecord = typeof backupRecords.$inferSelect;
+export type NewBackupRecord = typeof backupRecords.$inferInsert;
